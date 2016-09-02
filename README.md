@@ -1,6 +1,6 @@
 # process-media
 
-This script will process (resize, compress...) images and videos according to the specified options.
+This script will process (resize, compress...) photos and videos according to the specified options.
 
 It depends on the following linux binary:
 
