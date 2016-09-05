@@ -1,0 +1,30 @@
+options:
+  # 0 means number of detected cpu(s)/core(s)
+  max_threads: 0
+  codec: x264
+  gps: false
+  verbose: false
+  keep_name: false
+  overwrite: false
+  regex_photo: '\.je?pg$'
+  regex_video: '\.mp4$'
+
+format:
+  - name: archive
+    type: photo
+    # auto rotate photo according to Exif:Orientation
+    rotate: true
+  - name: archive
+    type: video
+    reencode: true
+  - name: web
+    type: photo
+    rotate: true
+    resize: 1920x1920>
+    compress: 90
+    strip: true
+  - name: web
+    type: video
+    reencode: true
+    resize: 1024x1024>
+    strip: true
