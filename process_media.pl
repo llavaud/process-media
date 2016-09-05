@@ -30,8 +30,8 @@ my $config_file = 'process_media.yaml';
 my $path;
 my @threads;
 my @objects;
-my $opts = &share({}); # shared variables must be declared before populating it
-my %options;
+my $opts = {};
+my %options : shared;
 
 ## MAIN
 
@@ -58,6 +58,8 @@ GetOptions(
 
 &get_objects();
 
+print Dumper(\@objects);exit;
+
 if (scalar @objects == 0) {
     print "No files to process, Exiting...\n";
     exit 0;
@@ -83,9 +85,9 @@ my $run: shared = 1;
 $queue_todo->enqueue($_) for @objects;
 
 # start threads
-while ($opts->{'max_threads'} >= 1) {
+while ($options{'max_threads'} >= 1) {
     push @threads, threads->new(\&process);
-    $opts->{'max_threads'}--;
+    $options{'max_threads'}--;
 }
 
 # wait first run to finish
@@ -119,8 +121,11 @@ sub process {
         elsif ($run == 2) {
             $obj->exist();
             if (ref($obj) eq 'Photo') {
+                $obj->create();
                 $obj->rotate();
-                $obj->optimize();
+                $obj->resize();
+                $obj->compress();
+                $obj->strip();
             }
             elsif (ref($obj) eq 'Video') {
                 $obj->encode();
@@ -195,6 +200,8 @@ sub set_options {
 }
 
 sub check_conf {
+
+    print Dumper($conf);
 
     # section
     foreach (keys %{ $conf->[0] }) {
@@ -322,15 +329,15 @@ sub get_objects {
     foreach (@files) {
         my $obj;
         if (/$conf->[0]->{'options'}->{'regex_photo'}/i) {
-            next if $opts->{'type'} !~ /photos/;
+            next if $options{'type'} !~ /photo/;
             $obj = new Photo;
         }
-        elsif (/$conf->[0]->{'options'}->{'regex_photo'}/i) {
-            next if $opts->{'type'} !~ /videos/;
+        elsif (/$conf->[0]->{'options'}->{'regex_video'}/i) {
+            next if $options{'type'} !~ /video/;
             $obj = new Video;
         }
         if (defined $obj) {
-            $obj->init($_, $opts);
+            $obj->init($_, \%options);
             push @objects, $obj;
         }
     }

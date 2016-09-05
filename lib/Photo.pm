@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use File::Basename qw/fileparse/;
+use File::Copy qw/copy/;
 use File::Path qw/make_path/;
 use Image::ExifTool qw/ImageInfo/;
 use Image::Magick;
@@ -19,8 +20,6 @@ sub new {
 	$obj{'original'} = &share({});
 	$obj{'options'} = &share({});
 	$obj{'final'} = &share({});
-	$obj{'final'}{'archive'} = &share({});
-	$obj{'final'}{'web'} = &share({});
 
 	bless \%obj, $class;
 
@@ -44,6 +43,7 @@ sub init {
 
 	# set final dir
 	foreach (split(',',$obj->{'options'}->{'format'})) {
+        $obj->{'final'}->{$_} = &share({});
 		$obj->{'final'}->{$_}->{'dir'} = $obj->{'original'}->{'dir'}.$_.'/';
 	}
 
@@ -99,14 +99,26 @@ sub exist {
 	return 1;
 }
 
+sub create {
+	my $obj = shift;
+
+	lock $obj;
+
+	foreach (split(',',$obj->{'options'}->{'format'})) {
+		print "[$obj->{'final'}->{$_}->{'path'}] Creating...\n" if defined $obj->{'options'}->{'verbose'};
+		make_path $obj->{'final'}->{$_}->{'dir'} unless -d $obj->{'final'}->{$_}->{'dir'};
+        copy("$obj->{'original'}->{'path'}", "$obj->{'final'}->{$_}->{'path'}");
+    }
+
+    return 1;
+}
+
 sub rotate {
 	my $obj = shift;
 
 	lock $obj;
 
 	foreach my $f (split(',',$obj->{'options'}->{'format'})) {
-
-		make_path $obj->{'final'}->{$f}->{'dir'} unless -d $obj->{'final'}->{$f}->{'dir'};
 
 		next if defined $obj->{'final'}->{$f}->{'exist'} and not defined $obj->{'options'}->{'overwrite'};
 

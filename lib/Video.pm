@@ -19,8 +19,6 @@ sub new {
     $obj{'original'} = &share({});
     $obj{'options'} = &share({});
     $obj{'final'} = &share({});
-    $obj{'final'}{'archive'} = &share({});
-    $obj{'final'}{'web'} = &share({});
 
     bless \%obj, $class;
 
@@ -44,6 +42,7 @@ sub init {
 
     # set final dir
     foreach (split(',',$obj->{'options'}->{'format'})) {
+        $obj->{'final'}->{$_} = &share({});
         $obj->{'final'}->{$_}->{'dir'} = $obj->{'original'}->{'dir'}.$_.'/videos/';
     }
 
