@@ -17,7 +17,7 @@ use Time::HiRes qw/sleep/;
 use YAML::Tiny;
 
 # Own modules
-use lib './libs';
+use lib './lib';
 use Photo;
 use Video;
 
