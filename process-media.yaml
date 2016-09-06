@@ -1,16 +1,22 @@
 %YAML 1.1
 ---
 
-# Options
-
-# 0 means number of detected cpu(s)/core(s)
+# 0 = auto, set to detected cpu(s)/core(s)
 max_threads: 0
-video_codec: 'x264'
-keep_gps_tags: false
+
+# activate a more verbose output
 verbose: false
-rename: true
+
+# rename file to the format YYYYMMDD-HHMMSS according to Exif:CreatDate
+keep_name: false
+
+# overwrite existing file(s)
 overwrite: false
+
+# regex used to identify photo file
 regex_photo: '\.je?pg$'
+
+# regex used to identify video file
 regex_video: '\.mp4$'
 
 ---
@@ -21,24 +27,27 @@ archive_photo:
   type: 'photo'
   # auto rotate photo according to Exif:Orientation
   rotate: true
-  output: 'archive'
+  output_dir: 'archive'
 
 archive_video:
   type: 'video'
+  codec: 'x264'
   reencode: true
-  output: 'archive'
+  output_dir: 'archive'
 
 web_photo:
   type: 'photo'
   rotate: true
   resize: '1920x1920>'
   compress: 90
-  strip: true
-  output: 'web'
+  strip: 'gps'
+  output_dir: 'web'
 
 web_video:
   type: 'video'
+  codec: 'x264'
   reencode: true
   resize: '1024x1024>'
   strip: true
-  output: 'web'
+  output_dir: 'web'
+

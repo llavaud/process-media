@@ -3,6 +3,7 @@ package Photo;
 use strict;
 use warnings;
 
+use Data::Dumper;
 use File::Basename qw/fileparse/;
 use File::Copy qw/copy/;
 use File::Path qw/make_path/;

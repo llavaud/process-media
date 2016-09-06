@@ -3,8 +3,7 @@
 use strict;
 use warnings;
 
-# need perl 5.14 to allow syntax: package A { ... }
-require 5.014;
+require 5.010;
 
 use Data::Dumper;
 use Getopt::Long qw/GetOptions/;
@@ -26,12 +25,12 @@ $SIG{'TERM'} = \&sig_handler;
 
 ## VARS
 
-my $config_file = 'process_media.yaml';
+my $config_file = 'process-media.yaml';
 my $path;
 my @threads;
 my @objects;
 my $opts = {};
-my %options : shared;
+our %options;
 
 ## MAIN
 
@@ -43,9 +42,7 @@ GetOptions(
     $opts,
     'type=s',
     'format=s',
-    'codec=s',
     'max_threads=i',
-    'gps',
     'keep_name',
     'verbose',
     'overwrite',
@@ -152,124 +149,104 @@ sub sig_handler {
 
 sub set_options {
 
-    # default values
-    # need perl >=5.10 for operator //
-
     # max_threads
     if (defined $opts->{'max_threads'}) {
         $options{'max_threads'} = ($opts->{'max_threads'} == 0) ? Sys::CPU::cpu_count() : $opts->{'max_threads'};
     } else {
-        $options{'max_threads'} = ($conf->[0]->{'options'}->{'max_threads'} == 0) ? Sys::CPU::cpu_count() : $conf->[0]->{'options'}->{'max_threads'};
+        $options{'max_threads'} = ($conf->[0]->{'max_threads'} == 0) ? Sys::CPU::cpu_count() : $conf->[0]->{'max_threads'};
     }
 
-    # codec
-    $options{'codec'} = $opts->{'codec'} // $conf->[0]->{'options'}->{'codec'};
-
     # verbose
-    $options{'verbose'} = $opts->{'verbose'} // $conf->[0]->{'options'}->{'verbose'};
+    $options{'verbose'} = $opts->{'verbose'} // $conf->[0]->{'verbose'};
 
     # overwrite
-    $options{'overwrite'} = $opts->{'overwrite'} // $conf->[0]->{'options'}->{'overwrite'};
+    $options{'overwrite'} = $opts->{'overwrite'} // $conf->[0]->{'overwrite'};
 
     # keep_name
-    $options{'keep_name'} = $opts->{'keep_name'} // $conf->[0]->{'options'}->{'keep_name'};
+    $options{'keep_name'} = $opts->{'keep_name'} // $conf->[0]->{'keep_name'};
 
-    # gps
-    $options{'gps'} = $opts->{'gps'} // $conf->[0]->{'options'}->{'gps'};
-
-    $options{'regex_photo'} = $conf->[0]->{'options'}->{'regex_photo'};
-    $options{'regex_video'} = $conf->[0]->{'options'}->{'regex_video'};
+    $options{'regex_photo'} = $conf->[0]->{'regex_photo'};
+    $options{'regex_video'} = $conf->[0]->{'regex_video'};
 
     # format
     if ($opts->{'format'}) {
         $options{'format'} = $opts->{'format'};
     } else {
-        my %f;
-        foreach my $h (@{ $conf->[0]->{'format'} }) {
-            $f{$h->{'name'}} = 1;
-        }
-        $options{'format'} = join(',', keys %f);
+        $options{'format'} = join(',', keys %{ $conf->[1] });
     }
 
     # type
     $options{'type'} = $opts->{'type'} // 'photo,video';
 
+    # format
+    $options{'allformat'} = $conf->[1];
+
     $path = $ARGV[0] // './';
+
+    print Dumper(\%options);
 
     return 1;
 }
 
 sub check_conf {
 
-    print Dumper($conf);
-
-    # section
-    foreach (keys %{ $conf->[0] }) {
-        die "Unknown section \'$_\' in config file" if $_ !~ /^(options|format)$/;
-    }
-
     # options
-    foreach (keys %{ $conf->[0]->{'options'} }) {
-        die "Unknown option \'$_\' in config file" if $_ !~ /^(max_threads|codec|gps|verbose|keep_name|overwrite|regex_photo|regex_video)$/;
+    foreach (keys %{ $conf->[0] }) {
+        die "Unknown options '$_' in config file\n"
+            if $_ !~ /^(overwrite|regex_photo|regex_video|max_threads|keep_name|verbose)$/;
+
+        # max_threads
+        die "Miss/Bad value for '$_' in config file\n"
+            if $_ eq 'max_threads' and $conf->[0]->{$_} !~ /^\d+$/;
+
+        # keep_name
+        die "Miss/Bad value for '$_' in config file\n"
+            if $_ eq 'keep_name' and $conf->[0]->{$_} !~ /^(true|false)$/;
+
+        # verbose
+        die "Miss/Bad value for '$_' in config file\n"
+            if $_ eq 'verbose' and $conf->[0]->{$_} !~ /^(true|false)$/;
+
+        # overwrite
+        die "Miss/Bad value for '$_' in config file\n"
+            if $_ eq 'overwrite' and $conf->[0]->{$_} !~ /^(true|false)$/;
     }
-
-    # max_threads
-    die "Miss/Bad value for 'max_threads' in config file\n"
-        if not defined $conf->[0]->{'options'}->{'max_threads'} or $conf->[0]->{'options'}->{'max_threads'} !~ /^\d+$/;
-
-    # codec
-    die "Miss/Bad value for 'codec' in config file\n"
-        if not defined $conf->[0]->{'options'}->{'codec'} or $conf->[0]->{'options'}->{'codec'} !~ /^(x26[45])$/;
-
-    # gps
-    die "Miss/Bad value for 'gps' in config file\n"
-        if not defined $conf->[0]->{'options'}->{'gps'} or $conf->[0]->{'options'}->{'gps'} !~ /^(true|false)$/;
-
-    # verbose
-    die "Miss/Bad value for 'verbose' in config file\n"
-        if not defined $conf->[0]->{'options'}->{'verbose'} or $conf->[0]->{'options'}->{'verbose'} !~ /^(true|false)$/;
-
-    # keep_name
-    die "Miss/Bad value for 'keep_name' in config file\n"
-        if not defined $conf->[0]->{'options'}->{'keep_name'} or $conf->[0]->{'options'}->{'keep_name'} !~ /^(true|false)$/;
-
-    # overwrite
-    die "Miss/Bad value for 'overwrite' in config file\n"
-        if not defined $conf->[0]->{'options'}->{'overwrite'} or $conf->[0]->{'options'}->{'overwrite'} !~ /^(true|false)$/;
-
-    # regex_photo
-    die "Miss/Bad value for 'regex_photo' in config file\n"
-        if not defined $conf->[0]->{'options'}->{'regex_photo'};
-
-    # regex_video
-    die "Miss/Bad value for 'regex_video' in config file\n"
-        if not defined $conf->[0]->{'options'}->{'regex_video'};
 
     # format
-    foreach my $h (@{ $conf->[0]->{'format'} }) {
-        foreach (keys %$h) {
-            die "Unknown option \'$_\' in config file" if $_ !~ /^(name|type|rotate|reencode|resize|compress|strip)$/;
+    foreach my $fname (keys %{ $conf->[1] }) {
+        die "Bad format name '$fname' in config file" if $fname !~ /^[\w-]+$/;
 
-            # name
-            die "Bad format name in config file\n" if $_ eq 'name' and $h->{'name'} !~ /^\w+$/;
+        foreach (keys %{ $conf->[1]->{$fname} }) {
+            die "Unknown format options '$_' in config file\n"
+                if $_ !~ /^(output_dir|type|rotate|compress|strip|resize|codec|reencode)$/;
 
             # type
-            die "Bad format type in config file\n" if $_ eq 'type' and $h->{'type'} !~ /^(photo|video)$/;
+            die "Bad format options '$_' in config file\n"
+                if $_ eq 'type' and $conf->[1]->{$fname}->{$_} !~ /^(photo|video)$/;
+
+            # output_dir
+            die "Bad format options '$_' in config file\n"
+                if $_ eq 'output_dir' and $conf->[1]->{$fname}->{$_} !~ /^[\w-]+$/;
 
             # rotate
-            die "Bad format rotate in config file\n" if $_ eq 'rotate' and $h->{'rotate'} !~ /^(true|false)$/;
+            die "Bad format options '$_' in config file\n"
+                if $_ eq 'rotate' and $conf->[1]->{$fname}->{$_} !~ /^(true|false)$/;
 
             # reencode
-            die "Bad format reencode in config file\n" if $_ eq 'reencode' and $h->{'reencode'} !~ /^(true|false)$/;
+            die "Bad format options '$_' in config file\n"
+                if $_ eq 'reencode' and $conf->[1]->{$fname}->{$_} !~ /^(true|false)$/;
 
             # resize
-            die "Bad format resize in config file\n" if $_ eq 'resize' and $h->{'resize'} !~ /^[\dx><]+$/;
+            die "Bad format options '$_' in config file\n"
+                if $_ eq 'resize' and $conf->[1]->{$fname}->{$_} !~ /^[\dx><]+$/;
 
             # strip
-            die "Bad format strip in config file\n" if $_ eq 'strip' and $h->{'strip'} !~ /^(true|false)$/;
+            die "Bad format options '$_' in config file\n"
+                if $_ eq 'strip' and $conf->[1]->{$fname}->{$_} !~ /^[\w-]+$/;
 
             # compress
-            die "Bad format compress in config file\n" if $_ eq 'compress' and $h->{'compress'} !~ /^\d+$/ and $h->{'compress'} > 100;
+            die "Bad format options '$_' in config file\n"
+                if $_ eq 'compress' and $conf->[1]->{$fname}->{$_} !~ /^\d+$/ and $conf->[1]->{$fname}->{$_} > 100;
         }
     }
 
@@ -283,20 +260,17 @@ sub check_params {
     # type
     if (defined $opts->{'type'}) {
         foreach (split(',',$opts->{'type'})) {
-            die "Bad type of files to process: $_, see help (-h) for supported type\n" unless /^(photo|video)$/;
+            die "Bad type of files to process: $_, see help (-h) for supported type\n"
+                if !/^(photo|video)$/;
         }
     }
 
     # format
     if (defined $opts->{'format'}) {
         foreach (split(',',$opts->{'format'})) {
-            die "Bad format to generate: $_, see help (-h) for supported format\n" unless /^(archive|web)$/;
+            die "Unknown format '$_'\n" if not defined $conf->[1]->{$_};
         }
     }
-
-    # codec
-    die "Bad video codec: $opts->{'codec'}, see help (-h) for supported codec\n"
-        if defined $opts->{'codec'} and $opts->{'codec'} !~ /^x26[45]$/;
 
     die "Incorrect parameters, see help (-h) for correct syntax\n" if @ARGV > 1;
 
@@ -351,9 +325,7 @@ Usage: $0 [options...] <path>
 Options:
 -t,--type\t\t{photos,videos}\tType of files to process (default: photos,videos)
 -f,--format\t\t{archive,web}\tFormat of files to generate (default: archive,web)
--c,--codec\t\t{x264|x265}\tVideo codec to use (default: x264)
 -m,--max_threads\t<num_threads>\tMaximum allowed threads (default: number of cpu(s)/core(s))
--g,--gps\t\t\t\tClean all tags except GPS tags (only relevant for type photos and format web)
 -k,--keep_name\t\t\t\tDo not rename file, by default file are renamed like this: YYYYMMDD-HHMMSS
 -v,--verbose\t\t\t\tVerbose output
 -o,--overwrite\t\t\t\tOverwrite existing files
