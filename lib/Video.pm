@@ -41,7 +41,8 @@ sub init {
     $obj->{'options'} = $opts;
 
     # set final dir
-    foreach (split(',',$obj->{'options'}->{'format'})) {
+    foreach (keys %{ $main::options{'format'} }) {
+        next if $main::options{'format'}{$_}{'type'} ne 'video';
         $obj->{'final'}->{$_} = &share({});
         $obj->{'final'}->{$_}->{'dir'} = $obj->{'original'}->{'dir'}.$_.'/videos/';
     }

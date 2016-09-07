@@ -19,7 +19,6 @@ sub new {
 
 	# with threads, we need to share specifically every sub hash
 	$obj{'original'} = &share({});
-	$obj{'options'} = &share({});
 	$obj{'final'} = &share({});
 
 	bless \%obj, $class;
@@ -28,7 +27,7 @@ sub new {
 }
 
 sub init {
-	my ($obj, $f, $opts) = @_;
+	my ($obj, $f) = @_;
 
 	lock $obj;
 
@@ -40,13 +39,16 @@ sub init {
 	$obj->{'original'}->{'dir'} = $dir;
 	$obj->{'original'}->{'extension'} = $ext;
 
-	$obj->{'options'} = $opts;
-
 	# set final dir
-	foreach (split(',',$obj->{'options'}->{'format'})) {
+    foreach (keys %{ $main::options{'format'} }) {
+        next if $main::options{'format'}{$_}{'type'} ne 'photo';
         $obj->{'final'}->{$_} = &share({});
-		$obj->{'final'}->{$_}->{'dir'} = $obj->{'original'}->{'dir'}.$_.'/';
-	}
+        if (defined $main::options{'format'}{$_}{'output_dir'}) {
+            $obj->{'final'}->{$_}->{'dir'} = $obj->{'original'}->{'dir'}.$main::options{'format'}{$_}{'output_dir'}.'/';
+        } else {
+            $obj->{'final'}->{$_}->{'dir'} = $obj->{'original'}->{'dir'}.$_.'/';
+        }
+    }
 
 	$obj->{'final'}->{'extension'} = $obj->{'original'}->{'extension'};
 
@@ -58,7 +60,7 @@ sub rename {
 
 	lock $obj;
 
-	if (defined $obj->{'options'}->{'keep_name'}) {
+	if ($main::options{'keep_name'} eq 'true') {
 		$obj->{'final'}->{'name'} = $obj->{'original'}->{'name'};
 	}
 	else {
@@ -73,11 +75,15 @@ sub rename {
 		$obj->{'final'}->{'name'} = $t->ymd('').'-'.$t->hms('');
 	}
 
-	print "[$obj->{'original'}->{'path'}] Rename to \'$obj->{'final'}->{'name'}\'\n" if defined $obj->{'options'}->{'verbose'};
+	print "[$obj->{'original'}->{'path'}] Rename to \'$obj->{'final'}->{'name'}\'\n"
+        if $main::options{'verbose'} eq 'true';
 
 	# set final path
-	foreach (split(',',$obj->{'options'}->{'format'})) {
-		$obj->{'final'}->{$_}->{'path'} = $obj->{'final'}->{$_}->{'dir'}.$obj->{'final'}->{'name'}.$obj->{'final'}->{'extension'};
+	foreach (keys %{ $main::options{'format'} }) {
+        next if $main::options{'format'}{$_}{'type'} ne 'photo';
+		$obj->{'final'}->{$_}->{'path'} = $obj->{'final'}->{$_}->{'dir'}
+                                         .$obj->{'final'}->{'name'}
+                                         .$obj->{'final'}->{'extension'};
 	}
 
 	return 1;
@@ -88,12 +94,17 @@ sub exist {
 
 	lock $obj;
 
-	print "$obj->{'original'}->{'path'} -> $obj->{'final'}->{'name'}\n" unless defined $obj->{'options'}->{'verbose'};
+	print "$obj->{'original'}->{'path'} -> $obj->{'final'}->{'name'}\n"
+        if not defined $main::options{'verbose'};
 
-	foreach my $f (split(',',$obj->{'options'}->{'format'})) {
-		if (-f $obj->{'final'}->{$f}->{'path'}) {
-			print "[$obj->{'final'}->{$f}->{'path'}] Already exist...\n" unless defined $obj->{'options'}->{'overwrite'};
-			$obj->{'final'}->{$f}->{'exist'} = 1;
+	foreach (keys %{ $main::options{'format'} }) {
+        next if $main::options{'format'}{$_}{'type'} ne 'photo';
+
+		if (-f $obj->{'final'}->{$_}->{'path'}) {
+			print "[$obj->{'final'}->{$_}->{'path'}] Already exist...\n"
+                if $main::options{'overwrite'} eq 'false';
+
+			$obj->{'final'}->{$_}->{'exist'} = 1;
 		}
 	}
 
@@ -105,8 +116,12 @@ sub create {
 
 	lock $obj;
 
-	foreach (split(',',$obj->{'options'}->{'format'})) {
-		print "[$obj->{'final'}->{$_}->{'path'}] Creating...\n" if defined $obj->{'options'}->{'verbose'};
+	foreach (keys %{ $main::options{'format'} }) {
+        next if $main::options{'format'}{$_}{'type'} ne 'photo';
+		next if defined $obj->{'final'}->{$_}->{'exist'} and $main::options{'overwrite'} eq 'false';
+
+		print "[$obj->{'final'}->{$_}->{'path'}] Creating...\n" if $main::options{'verbose'} eq 'true';
+
 		make_path $obj->{'final'}->{$_}->{'dir'} unless -d $obj->{'final'}->{$_}->{'dir'};
         copy("$obj->{'original'}->{'path'}", "$obj->{'final'}->{$_}->{'path'}");
     }
@@ -119,24 +134,25 @@ sub rotate {
 
 	lock $obj;
 
-	foreach my $f (split(',',$obj->{'options'}->{'format'})) {
+	foreach (keys %{ $main::options{'format'} }) {
+        next if $main::options{'format'}{$_}{'type'} ne 'photo';
+        next if not defined $main::options{'format'}{$_}{'rotate'} or $main::options{'format'}{$_}{'rotate'} ne 'true';
+		next if defined $obj->{'final'}->{$_}->{'exist'} and $main::options{'overwrite'} eq 'false';
 
-		next if defined $obj->{'final'}->{$f}->{'exist'} and not defined $obj->{'options'}->{'overwrite'};
-
-		print "[$obj->{'final'}->{$f}->{'path'}] Rotating...\n" if defined $obj->{'options'}->{'verbose'};
+		print "[$obj->{'final'}->{$_}->{'path'}] Rotating...\n" if $main::options{'verbose'} eq 'true';
 
 		my $image = new Image::Magick;
 		if (my $err = $image->Read($obj->{'original'}->{'path'})){
-			warn "[$obj->{'final'}->{$f}->{'path'}] Failed to read, $err";
+			warn "[$obj->{'final'}->{$_}->{'path'}] Failed to read, $err";
 			return 0;
 		}
 		# physically rotate image according to the exif orientation tag
 		if (my $err = $image->AutoOrient()) {
-			warn "[$obj->{'final'}->{$f}->{'path'}] Failed to auto-orient, $err";
+			warn "[$obj->{'final'}->{$_}->{'path'}] Failed to auto-orient, $err";
 			return 0;
 		}
-		if (my $err = $image->Write($obj->{'final'}->{$f}->{'path'})) {
-			warn "[$obj->{'final'}->{$f}->{'path'}] Failed to write, $err";
+		if (my $err = $image->Write($obj->{'final'}->{$_}->{'path'})) {
+			warn "[$obj->{'final'}->{$_}->{'path'}] Failed to write, $err";
 			return 0;
 		}
 	}
@@ -144,62 +160,115 @@ sub rotate {
 	return 1;
 }
 
-sub optimize {
+sub resize {
 	my $obj = shift;
 
 	lock $obj;
 
-	foreach my $f (split(',',$obj->{'options'}->{'format'})) {
+	foreach (keys %{ $main::options{'format'} }) {
+        next if $main::options{'format'}{$_}{'type'} ne 'photo';
+        next if not defined $main::options{'format'}{$_}{'resize'};
+		next if defined $obj->{'final'}->{$_}->{'exist'} and $main::options{'overwrite'} eq 'false';
 
-		next if defined $obj->{'final'}->{$f}->{'exist'} and not defined $obj->{'options'}->{'overwrite'};
-
-		# dont optimize archive format
-		next if $f eq 'archive';
-
-		print "[$obj->{'final'}->{$f}->{'path'}] Optimizing...\n" if defined $obj->{'options'}->{'verbose'};
+		print "[$obj->{'final'}->{$_}->{'path'}] Resizing...\n" if $main::options{'verbose'} eq 'true';
 
 		my $image = new Image::Magick;
-		if (my $err = $image->Read($obj->{'final'}->{$f}->{'path'})){
-			warn "[$obj->{'final'}->{$f}->{'path'}] Failed to read, $err";
+		if (my $err = $image->Read($obj->{'final'}->{$_}->{'path'})){
+			warn "[$obj->{'final'}->{$_}->{'path'}] Failed to read, $err";
 			return 0;
 		}
 		# resize image to get the larger side to 1920 (only if it is larger than 1920) and preserve aspect ratio
-		if (my $err = $image->Resize("1920x1920>")){
-			warn "[$obj->{'final'}->{$f}->{'path'}] Failed to resize, $err";
+		if (my $err = $image->Resize($main::options{'format'}{$_}{'resize'})){
+			warn "[$obj->{'final'}->{$_}->{'path'}] Failed to resize, $err";
 			return 0;
 		}
-		if (my $err = $image->Write(filename => $obj->{'final'}->{$f}->{'path'}, quality => 90)) {
-			warn "[$obj->{'final'}->{$f}->{'path'}] Failed to write, $err";
+		if (my $err = $image->Write($obj->{'final'}->{$_}->{'path'})) {
+			warn "[$obj->{'final'}->{$_}->{'path'}] Failed to write, $err";
 			return 0;
 		}
+    }
+
+    return 1;
+}
+
+sub compress {
+	my $obj = shift;
+
+	lock $obj;
+
+	foreach (keys %{ $main::options{'format'} }) {
+        next if $main::options{'format'}{$_}{'type'} ne 'photo';
+        next if not defined $main::options{'format'}{$_}{'compress'};
+		next if defined $obj->{'final'}->{$_}->{'exist'} and $main::options{'overwrite'} eq 'false';
+
+		print "[$obj->{'final'}->{$_}->{'path'}] Compressing...\n" if $main::options{'verbose'} eq 'true';
+
+		my $image = new Image::Magick;
+		if (my $err = $image->Read($obj->{'final'}->{$_}->{'path'})){
+			warn "[$obj->{'final'}->{$_}->{'path'}] Failed to read, $err";
+			return 0;
+		}
+		if (my $err = $image->Write(filename => $obj->{'final'}->{$_}->{'path'}, quality => $main::options{'format'}{$_}{'compress'})) {
+			warn "[$obj->{'final'}->{$_}->{'path'}] Failed to write, $err";
+			return 0;
+		}
+    }
+
+    return 1;
+}
+
+sub strip {
+	my $obj = shift;
+
+	lock $obj;
+
+	foreach my $fname (keys %{ $main::options{'format'} }) {
+        next if $main::options{'format'}{$fname}{'type'} ne 'photo';
+        next if not defined $main::options{'format'}{$fname}{'strip'};
+		next if defined $obj->{'final'}->{$fname}->{'exist'} and $main::options{'overwrite'} eq 'false';
+
+		print "[$obj->{'final'}->{$fname}->{'path'}] Stripping...\n" if $main::options{'verbose'} eq 'true';
 
 		# remove all tags
 		my $exif = new Image::ExifTool;
 		my ($ret, $err);
-		($ret, $err) = $exif->SetNewValue('*');
-		if (defined $err) {
-			warn "[$obj->{'final'}->{$f}->{'path'}] Failed to remove tags, $err";
-			return 0;
-		}
-		# keep Orientation tag
-		$ret = $exif->SetNewValuesFromFile($obj->{'final'}->{$f}->{'path'}, 'EXIF:Orientation');
-		if (defined $ret->{'Error'}) {
-			warn "[$obj->{'final'}->{$f}->{'path'}] Failed to retrieve tag orientation, $ret->{'Error'}";
-			return 0;
-		}
-		# keep GPS tags if asked
-		$ret = $exif->SetNewValuesFromFile($obj->{'final'}->{$f}->{'path'}, 'gps:all') if defined $obj->{'options'}->{'gps'};
-		if (defined $ret->{'Error'}) {
-			warn "[$obj->{'final'}->{$f}->{'path'}] Failed to retrieve tag orientation, $ret->{'Error'}";
-			return 0;
-		}
-		unless ($exif->WriteInfo($obj->{'final'}->{$f}->{'path'})) {
-			warn "[$obj->{'final'}->{$f}->{'path'}] Failed to write, ".$exif->GetValue('Error');
-			return 0;
-		}
-	}
+        ($ret, $err) = $exif->SetNewValue('*');
+        if (defined $err) {
+            warn "[$obj->{'final'}->{$fname}->{'path'}] Failed to remove tags, $err";
+            return 0;
+        }
 
-	return 1;
+        if (ref $main::options{'format'}{$fname}{'strip'} eq 'ARRAY') {
+
+            foreach (@{ $main::options{'format'}{$fname}{'strip'} }) {
+
+                if ($_ eq 'gps') {
+
+                    # keep GPS tags if asked
+                    $ret = $exif->SetNewValuesFromFile($obj->{'final'}->{$fname}->{'path'}, 'gps:all');
+                    if (defined $ret->{'Error'}) {
+                        warn "[$obj->{'final'}->{$fname}->{'path'}] Failed to retrieve tag orientation, $ret->{'Error'}";
+                        return 0;
+                    }
+                }
+                elsif ($_ eq 'orientation') {
+                    # keep Orientation tag
+                    $ret = $exif->SetNewValuesFromFile($obj->{'final'}->{$fname}->{'path'}, 'EXIF:Orientation');
+                    if (defined $ret->{'Error'}) {
+                        warn "[$obj->{'final'}->{$fname}->{'path'}] Failed to retrieve tag orientation, $ret->{'Error'}";
+                        return 0;
+                    }
+                }
+            }
+        }
+
+        unless ($exif->WriteInfo($obj->{'final'}->{$fname}->{'path'})) {
+            warn "[$obj->{'final'}->{$fname}->{'path'}] Failed to write, ".$exif->GetValue('Error');
+            return 0;
+        }
+    }
+
+    return 1;
 }
 
 sub integrity {
@@ -207,13 +276,13 @@ sub integrity {
 
 	lock $obj;
 
-	foreach my $f (split(',',$obj->{'options'}->{'format'})) {
+    foreach (keys %{ $main::options{'format'} }) {
+        next if $main::options{'format'}{$_}{'type'} ne 'photo';
+        next if defined $obj->{'final'}->{$_}->{'exist'} and $main::options{'overwrite'} eq 'false';
 
-		next if defined $obj->{'final'}->{$f}->{'exist'} and not defined $obj->{'options'}->{'overwrite'};
+		print "[$obj->{'final'}->{$_}->{'path'}] Checking integrity...\n" if $main::options{'verbose'} eq 'true';
 
-		print "[$obj->{'final'}->{$f}->{'path'}] Checking integrity...\n" if defined $obj->{'options'}->{'verbose'};
-
-		&execute($obj->{'final'}->{$f}->{'path'}, 'File is corrupted', "jpeginfo -c $obj->{'final'}->{$f}->{'path'} >/dev/null 2>&1");
+		&execute($obj->{'final'}->{$_}->{'path'}, 'File is corrupted', "jpeginfo -c $obj->{'final'}->{$_}->{'path'} >/dev/null 2>&1");
 	}
 
 	return 1;

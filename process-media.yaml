@@ -5,7 +5,7 @@
 max_threads: 0
 
 # activate a more verbose output
-verbose: false
+verbose: true
 
 # rename file to the format YYYYMMDD-HHMMSS according to Exif:CreatDate
 keep_name: false
@@ -25,14 +25,7 @@ regex_video: '\.mp4$'
 
 archive_photo:
   type: 'photo'
-  # auto rotate photo according to Exif:Orientation
   rotate: true
-  output_dir: 'archive'
-
-archive_video:
-  type: 'video'
-  codec: 'x264'
-  reencode: true
   output_dir: 'archive'
 
 web_photo:
@@ -40,8 +33,16 @@ web_photo:
   rotate: true
   resize: '1920x1920>'
   compress: 90
-  strip: 'gps'
+  strip:
+      - 'orientation'
+      - 'gps'
   output_dir: 'web'
+
+archive_video:
+  type: 'video'
+  codec: 'x264'
+  reencode: true
+  output_dir: 'archive'
 
 web_video:
   type: 'video'

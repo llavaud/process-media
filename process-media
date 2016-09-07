@@ -55,7 +55,7 @@ GetOptions(
 
 &get_objects();
 
-print Dumper(\@objects);exit;
+#print Dumper(\%options);
 
 if (scalar @objects == 0) {
     print "No files to process, Exiting...\n";
@@ -94,6 +94,8 @@ $queue_done->end;
 
 # search duplicate name
 'Photo'->search_duplicate(@objects);
+
+#print Dumper(\@objects);
 
 $run = 2;
 $queue_todo->enqueue($_) for @objects;
@@ -158,34 +160,35 @@ sub set_options {
 
     # verbose
     $options{'verbose'} = $opts->{'verbose'} // $conf->[0]->{'verbose'};
-
+    
     # overwrite
     $options{'overwrite'} = $opts->{'overwrite'} // $conf->[0]->{'overwrite'};
 
     # keep_name
     $options{'keep_name'} = $opts->{'keep_name'} // $conf->[0]->{'keep_name'};
 
-    $options{'regex_photo'} = $conf->[0]->{'regex_photo'};
-    $options{'regex_video'} = $conf->[0]->{'regex_video'};
+	$options{'type'} = $opts->{'type'} // 'photo,video';
 
-    # format
-    if ($opts->{'format'}) {
-        $options{'format'} = $opts->{'format'};
+	if ($opts->{'format'}) {
+        foreach my $fname (split(',', $opts->{'format'})) {
+			foreach my $t (split(',', $options{'type'})) {
+				$options{'format'}{$fname} = $conf->[1]->{$fname}
+					if $conf->[1]->{$fname}->{'type'} eq $t;
+			}
+        }
     } else {
-        $options{'format'} = join(',', keys %{ $conf->[1] });
-    }
+		foreach my $fname (keys %{ $conf->[1] }) {
+			foreach my $t (split(',', $options{'type'})) {
+				$options{'format'}{$fname} = $conf->[1]->{$fname}
+					if $conf->[1]->{$fname}->{'type'} eq $t;
+			}
+		}
+	}
 
-    # type
-    $options{'type'} = $opts->{'type'} // 'photo,video';
+	$options{'regex_photo'} = $conf->[0]->{'regex_photo'};
+	$options{'regex_video'} = $conf->[0]->{'regex_video'};
 
-    # format
-    $options{'allformat'} = $conf->[1];
-
-    $path = $ARGV[0] // './';
-
-    print Dumper(\%options);
-
-    return 1;
+	return 1;
 }
 
 sub check_conf {
@@ -241,8 +244,8 @@ sub check_conf {
                 if $_ eq 'resize' and $conf->[1]->{$fname}->{$_} !~ /^[\dx><]+$/;
 
             # strip
-            die "Bad format options '$_' in config file\n"
-                if $_ eq 'strip' and $conf->[1]->{$fname}->{$_} !~ /^[\w-]+$/;
+#            die "Bad format options '$_' in config file\n"
+#                if $_ eq 'strip' and $conf->[1]->{$fname}->{$_} !~ /^[\w-]+$/;
 
             # compress
             die "Bad format options '$_' in config file\n"
@@ -254,6 +257,8 @@ sub check_conf {
 }
 
 sub check_params {
+
+    $path = $ARGV[0] // './';
 
     &usage() if $opts->{'help'};
 
@@ -302,16 +307,16 @@ sub get_objects {
 
     foreach (@files) {
         my $obj;
-        if (/$conf->[0]->{'options'}->{'regex_photo'}/i) {
+        if (/$conf->[0]->{'regex_photo'}/i) {
             next if $options{'type'} !~ /photo/;
             $obj = new Photo;
         }
-        elsif (/$conf->[0]->{'options'}->{'regex_video'}/i) {
+        elsif (/$conf->[0]->{'regex_video'}/i) {
             next if $options{'type'} !~ /video/;
             $obj = new Video;
         }
         if (defined $obj) {
-            $obj->init($_, \%options);
+            $obj->init($_);
             push @objects, $obj;
         }
     }
