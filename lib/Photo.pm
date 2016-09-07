@@ -95,7 +95,7 @@ sub exist {
 	lock $obj;
 
 	print "$obj->{'original'}->{'path'} -> $obj->{'final'}->{'name'}\n"
-        if not defined $main::options{'verbose'};
+        if $main::options{'verbose'} eq 'false';
 
 	foreach (keys %{ $main::options{'format'} }) {
         next if $main::options{'format'}{$_}{'type'} ne 'photo';
