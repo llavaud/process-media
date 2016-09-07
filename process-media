@@ -31,6 +31,8 @@ my @threads;
 my @objects;
 my $opts = {};
 our %options;
+my $regex_photo = '\.je?pg$';
+my $regex_video = '\.mp4$';
 
 ## MAIN
 
@@ -151,6 +153,8 @@ sub sig_handler {
 
 sub set_options {
 
+    $path = $ARGV[0] // './';
+
     # max_threads
     if (defined $opts->{'max_threads'}) {
         $options{'max_threads'} = ($opts->{'max_threads'} == 0) ? Sys::CPU::cpu_count() : $opts->{'max_threads'};
@@ -159,13 +163,13 @@ sub set_options {
     }
 
     # verbose
-    $options{'verbose'} = $opts->{'verbose'} // $conf->[0]->{'verbose'};
+    $options{'verbose'} = $opts->{'verbose'} ? 'true' : $conf->[0]->{'verbose'};
     
     # overwrite
-    $options{'overwrite'} = $opts->{'overwrite'} // $conf->[0]->{'overwrite'};
+    $options{'overwrite'} = $opts->{'overwrite'} ? 'true' : $conf->[0]->{'overwrite'};
 
     # keep_name
-    $options{'keep_name'} = $opts->{'keep_name'} // $conf->[0]->{'keep_name'};
+    $options{'keep_name'} = $opts->{'keep_name'} ? 'true' : $conf->[0]->{'keep_name'};
 
 	$options{'type'} = $opts->{'type'} // 'photo,video';
 
@@ -185,9 +189,6 @@ sub set_options {
 		}
 	}
 
-	$options{'regex_photo'} = $conf->[0]->{'regex_photo'};
-	$options{'regex_video'} = $conf->[0]->{'regex_video'};
-
 	return 1;
 }
 
@@ -196,7 +197,7 @@ sub check_conf {
     # options
     foreach (keys %{ $conf->[0] }) {
         die "Unknown options '$_' in config file\n"
-            if $_ !~ /^(overwrite|regex_photo|regex_video|max_threads|keep_name|verbose)$/;
+            if $_ !~ /^(overwrite|max_threads|keep_name|verbose)$/;
 
         # max_threads
         die "Miss/Bad value for '$_' in config file\n"
@@ -244,8 +245,16 @@ sub check_conf {
                 if $_ eq 'resize' and $conf->[1]->{$fname}->{$_} !~ /^[\dx><]+$/;
 
             # strip
-#            die "Bad format options '$_' in config file\n"
-#                if $_ eq 'strip' and $conf->[1]->{$fname}->{$_} !~ /^[\w-]+$/;
+            if ($_ eq 'strip') {
+                if (ref $conf->[1]->{$fname}->{$_} eq 'ARRAY') {
+                    foreach my $tag (@{ $conf->[1]->{$fname}->{$_} }) {
+                        die "Bad format strip tag '$tag' in config file\n" if $tag !~ /^(gps|orientation)$/;
+                    }
+                } else {
+                    die "Bad format options '$_' in config file\n"
+                        if  $conf->[1]->{$fname}->{$_} !~ /^(true|false)$/;
+                }
+            }
 
             # compress
             die "Bad format options '$_' in config file\n"
@@ -258,13 +267,11 @@ sub check_conf {
 
 sub check_params {
 
-    $path = $ARGV[0] // './';
-
     &usage() if $opts->{'help'};
 
     # type
     if (defined $opts->{'type'}) {
-        foreach (split(',',$opts->{'type'})) {
+        foreach (split(',', $opts->{'type'})) {
             die "Bad type of files to process: $_, see help (-h) for supported type\n"
                 if !/^(photo|video)$/;
         }
@@ -272,7 +279,7 @@ sub check_params {
 
     # format
     if (defined $opts->{'format'}) {
-        foreach (split(',',$opts->{'format'})) {
+        foreach (split(',', $opts->{'format'})) {
             die "Unknown format '$_'\n" if not defined $conf->[1]->{$_};
         }
     }
@@ -307,11 +314,11 @@ sub get_objects {
 
     foreach (@files) {
         my $obj;
-        if (/$conf->[0]->{'regex_photo'}/i) {
+        if (/$regex_photo/i) {
             next if $options{'type'} !~ /photo/;
             $obj = new Photo;
         }
-        elsif (/$conf->[0]->{'regex_video'}/i) {
+        elsif (/$regex_video/i) {
             next if $options{'type'} !~ /video/;
             $obj = new Video;
         }

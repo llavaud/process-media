@@ -5,19 +5,13 @@
 max_threads: 0
 
 # activate a more verbose output
-verbose: true
+verbose: false
 
 # rename file to the format YYYYMMDD-HHMMSS according to Exif:CreatDate
 keep_name: false
 
 # overwrite existing file(s)
 overwrite: false
-
-# regex used to identify photo file
-regex_photo: '\.je?pg$'
-
-# regex used to identify video file
-regex_video: '\.mp4$'
 
 ---
 
