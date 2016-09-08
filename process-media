@@ -161,15 +161,23 @@ sub set_options {
 
     $options{'type'} = $opts->{'type'} // '';
 
-    if ($opts->{'format'} and not defined $opts->{'type'}) {
-        my %t;
-        foreach (split(',', $opts->{'format'})) {
-            $t{$conf->[1]->{$_}->{'type'}} = 1;
+    if (not defined $opts->{'type'}) {
+        if (defined $opts->{'format'}) {
+            my %t;
+            foreach (split(',', $opts->{'format'})) {
+                $t{$conf->[1]->{$_}->{'type'}} = 1;
+            }
+            $options{'type'} = join(',', keys %t);
+        } else {
+            my %t;
+            foreach (keys %{ $conf->[1] }) {
+                $t{$conf->[1]->{$_}->{'type'}} = 1;
+            }
+            $options{'type'} = join(',', keys %t);
         }
-        $options{'type'} = join(',', keys %t);
     }
 
-	if ($opts->{'format'}) {
+	if (defined $opts->{'format'}) {
         foreach my $fname (split(',', $opts->{'format'})) {
 			foreach my $t (split(',', $options{'type'})) {
 				$options{'format'}{$fname} = $conf->[1]->{$fname}
@@ -185,6 +193,8 @@ sub set_options {
 		}
 	}
 
+
+    print Dumper(\%options);
     die "No format found with your type and format combination\n"
         if not exists $options{'format'};
 
@@ -338,10 +348,10 @@ sub usage {
     print<<EOF;
 Usage: $0 [options...] <path>
 Options:
--t,--type\t\t{photos,videos}\tType of files to process (default: photos,videos)
--f,--format\t\t{archive,web}\tFormat of files to generate (default: archive,web)
+-t,--type\t\t{photo,video}\tType of files to process (default: photo,video)
+-f,--format\t\t{format1,...}\tFormat to generate (default: all format defined in config file)
 -m,--max_threads\t<num_threads>\tMaximum allowed threads (default: number of cpu(s)/core(s))
--k,--keep_name\t\t\t\tDo not rename file, by default file are renamed like this: YYYYMMDD-HHMMSS
+-k,--keep_name\t\t\t\tDo not rename file
 -v,--verbose\t\t\t\tVerbose output
 -o,--overwrite\t\t\t\tOverwrite existing files
 -h,--help\t\t\t\tThis help text
