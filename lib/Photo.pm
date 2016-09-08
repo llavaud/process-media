@@ -100,7 +100,7 @@ sub exist {
     lock $obj;
 
     print "$obj->{'original'}->{'path'} -> $obj->{'final'}->{'name'}\n"
-        if $main::options{'verbose'} eq 'false';
+        if $main::options{'verbose'} eq 'false' and $main::options{'batch'} ne 'true';
 
     foreach (keys %{ $main::options{'format'} }) {
         next if $main::options{'format'}{$_}{'type'} ne 'photo';

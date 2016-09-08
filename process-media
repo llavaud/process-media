@@ -44,6 +44,7 @@ GetOptions(
     'type=s',
     'format=s',
     'max_threads=i',
+    'batch',
     'keep_name',
     'verbose',
     'overwrite',
@@ -57,21 +58,23 @@ GetOptions(
 &get_objects();
 
 if (scalar @objects == 0) {
-    print "No files to process, Exiting...\n";
+    print "No files to process, Exiting...\n" if $options{'batch'} eq 'false';
     exit 0;
 } else {
-    print "Found ".scalar @objects." files...\n";
-    ReadMode 4;
-    my $key = '';
-    while($key !~ /^(?:y|n)$/) {
-        1 while defined ReadKey -1; # discard any previous input
-        print "Proceed ? (y/n): ";
-        $key = ReadKey 0;
-        print "$key\n";
-    }
-    ReadMode 0;
+    if ($options{'batch'} eq 'false') {
+        print "Found ".scalar @objects." files...\n";
+        ReadMode 4;
+        my $key = '';
+        while($key !~ /^(?:y|n)$/) {
+            1 while defined ReadKey -1; # discard any previous input
+            print "Proceed ? (y/n): ";
+            $key = ReadKey 0;
+            print "$key\n";
+        }
+        ReadMode 0;
 
-    exit 0 if $key ne 'y';
+        exit 0 if $key ne 'y';
+    }
 }
 
 my $queue_todo = new Thread::Queue;
@@ -157,6 +160,9 @@ sub set_options {
 
     # keep_name
     $options{'keep_name'} = $opts->{'keep_name'} ? 'true' : $conf->[0]->{'keep_name'};
+
+    # batch
+    $options{'batch'} = $opts->{'batch'} ? 'true' : 'false';
 
     $options{'type'} = $opts->{'type'} // '';
 
@@ -362,6 +368,7 @@ Options:
 -k,--keep_name\t\t\t\tDo not rename file
 -v,--verbose\t\t\t\tVerbose output
 -o,--overwrite\t\t\t\tOverwrite existing files
+-b,--batch\t\t\t\tRun in non-interactive mode, allowing to run in a crontab
 -h,--help\t\t\t\tThis help text
 EOF
     exit 0;
