@@ -46,4 +46,3 @@ web_video:
   strip: true
   thumbnail: true
   output_dir: 'web'
-
