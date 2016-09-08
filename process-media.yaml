@@ -34,15 +34,16 @@ web_photo:
 
 archive_video:
   type: 'video'
-  codec: 'x264'
   reencode: true
+  codec: 'x264'
   output_dir: 'archive'
 
 web_video:
   type: 'video'
-  codec: 'x264'
   reencode: true
+  codec: 'x264'
   resize: '1024'
   strip: true
+  thumbnail: true
   output_dir: 'web'
 

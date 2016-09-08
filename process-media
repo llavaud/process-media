@@ -121,16 +121,10 @@ sub thread {
         }
         elsif ($run == 2) {
             $obj->exist();
-            if (ref($obj) eq 'Photo') {
-                $obj->create();
-                $obj->process();
-                $obj->strip();
-            }
-            elsif (ref($obj) eq 'Video') {
-                $obj->encode();
-                $obj->delete_tags();
-                $obj->thumbnail();
-            }
+            $obj->create();
+            $obj->process();
+            $obj->strip();
+            $obj->thumbnail() if ref($obj) eq 'Video';
             $obj->integrity();
         }
     }
@@ -220,7 +214,7 @@ sub check_conf {
 
         foreach (keys %{ $conf->[1]->{$fname} }) {
             die "Unknown format options '$_' in config file\n"
-                if $_ !~ /^(output_dir|type|rotate|compress|strip|resize|codec|reencode)$/;
+                if $_ !~ /^(output_dir|type|rotate|compress|strip|resize|codec|reencode|thumbnail)$/;
 
             # type
             die "Bad format options '$_' in config file\n"
@@ -237,6 +231,10 @@ sub check_conf {
             # reencode
             die "Bad format options '$_' in config file\n"
                 if $_ eq 'reencode' and $conf->[1]->{$fname}->{$_} !~ /^(true|false)$/;
+
+            # thumbnail
+            die "Bad format options '$_' in config file\n"
+                if $_ eq 'thumbnail' and $conf->[1]->{$fname}->{$_} !~ /^(true|false)$/;
 
             # resize
             die "Bad format options '$_' in config file\n"
