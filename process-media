@@ -57,8 +57,6 @@ GetOptions(
 
 &get_objects();
 
-#print Dumper(\%options);
-
 if (scalar @objects == 0) {
     print "No files to process, Exiting...\n";
     exit 0;
@@ -96,8 +94,6 @@ $queue_done->end;
 
 # search duplicate name
 'Photo'->search_duplicate(@objects);
-
-#print Dumper(\@objects);
 
 $run = 2;
 $queue_todo->enqueue($_) for @objects;
@@ -163,7 +159,15 @@ sub set_options {
     # keep_name
     $options{'keep_name'} = $opts->{'keep_name'} ? 'true' : $conf->[0]->{'keep_name'};
 
-	$options{'type'} = $opts->{'type'} // 'photo,video';
+    $options{'type'} = $opts->{'type'} // '';
+
+    if ($opts->{'format'} and not defined $opts->{'type'}) {
+        my %t;
+        foreach (split(',', $opts->{'format'})) {
+            $t{$conf->[1]->{$_}->{'type'}} = 1;
+        }
+        $options{'type'} = join(',', keys %t);
+    }
 
 	if ($opts->{'format'}) {
         foreach my $fname (split(',', $opts->{'format'})) {
@@ -180,6 +184,9 @@ sub set_options {
 			}
 		}
 	}
+
+    die "No format found with your type and format combination\n"
+        if not exists $options{'format'};
 
 	return 1;
 }
