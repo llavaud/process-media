@@ -16,7 +16,7 @@ sub new {
 
     my %obj : shared;
 
-    # with threads, need to share specifically every sub hash
+    # with threads, we need to share specifically every sub hash
     $obj{'original'} = &share({});
     $obj{'final'} = &share({});
 
@@ -26,7 +26,7 @@ sub new {
 }
 
 sub init {
-    my ($obj, $f, $opts) = @_;
+    my ($obj, $f) = @_;
 
     lock $obj;
 
@@ -49,7 +49,7 @@ sub init {
         }
     }
 
-    $obj->{'final'}->{'extension'} = '.mp4';
+    $obj->{'final'}->{'extension'} = lc $obj->{'original'}->{'extension'};
 
     return 1;
 }
