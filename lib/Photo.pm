@@ -50,7 +50,7 @@ sub init {
         }
     }
 
-	$obj->{'final'}->{'extension'} = $obj->{'original'}->{'extension'};
+	$obj->{'final'}->{'extension'} = lc $obj->{'original'}->{'extension'};
 
 	return 1;
 }
@@ -129,17 +129,16 @@ sub create {
     return 1;
 }
 
-sub rotate {
+sub process {
 	my $obj = shift;
 
 	lock $obj;
 
 	foreach (keys %{ $main::options{'format'} }) {
         next if $main::options{'format'}{$_}{'type'} ne 'photo';
-        next if not defined $main::options{'format'}{$_}{'rotate'} or $main::options{'format'}{$_}{'rotate'} ne 'true';
 		next if defined $obj->{'final'}->{$_}->{'exist'} and $main::options{'overwrite'} eq 'false';
 
-		print "[$obj->{'final'}->{$_}->{'path'}] Rotating...\n" if $main::options{'verbose'} eq 'true';
+		print "[$obj->{'final'}->{$_}->{'path'}] Processing...\n" if $main::options{'verbose'} eq 'true';
 
 		my $image = new Image::Magick;
 		if (my $err = $image->Read($obj->{'original'}->{'path'})){
@@ -147,74 +146,25 @@ sub rotate {
 			return 0;
 		}
 		# physically rotate image according to the exif orientation tag
-		if (my $err = $image->AutoOrient()) {
+		if ($main::options{'format'}{$_}{'rotate'} eq 'true' and
+            my $err = $image->AutoOrient()) {
 			warn "[$obj->{'final'}->{$_}->{'path'}] Failed to auto-orient, $err";
 			return 0;
 		}
-		if (my $err = $image->Write($obj->{'final'}->{$_}->{'path'})) {
+		# resize image to get the larger side to 1920 (only if it is larger than 1920) and preserve aspect ratio
+		if (defined $main::options{'format'}{$_}{'resize'} and
+            my $err = $image->Resize("$main::options{'format'}{$_}{'resize'}x$main::options{'format'}{$_}{'resize'}>")){
+			warn "[$obj->{'final'}->{$_}->{'path'}] Failed to resize, $err";
+			return 0;
+		}
+        my $quality = $main::options{'format'}{$_}{'compress'} // '100';
+		if (my $err = $image->Write(filename => $obj->{'final'}->{$_}->{'path'}, quality => $quality)) {
 			warn "[$obj->{'final'}->{$_}->{'path'}] Failed to write, $err";
 			return 0;
 		}
 	}
 
 	return 1;
-}
-
-sub resize {
-	my $obj = shift;
-
-	lock $obj;
-
-	foreach (keys %{ $main::options{'format'} }) {
-        next if $main::options{'format'}{$_}{'type'} ne 'photo';
-        next if not defined $main::options{'format'}{$_}{'resize'};
-		next if defined $obj->{'final'}->{$_}->{'exist'} and $main::options{'overwrite'} eq 'false';
-
-		print "[$obj->{'final'}->{$_}->{'path'}] Resizing...\n" if $main::options{'verbose'} eq 'true';
-
-		my $image = new Image::Magick;
-		if (my $err = $image->Read($obj->{'final'}->{$_}->{'path'})){
-			warn "[$obj->{'final'}->{$_}->{'path'}] Failed to read, $err";
-			return 0;
-		}
-		# resize image to get the larger side to 1920 (only if it is larger than 1920) and preserve aspect ratio
-		if (my $err = $image->Resize($main::options{'format'}{$_}{'resize'})){
-			warn "[$obj->{'final'}->{$_}->{'path'}] Failed to resize, $err";
-			return 0;
-		}
-		if (my $err = $image->Write($obj->{'final'}->{$_}->{'path'})) {
-			warn "[$obj->{'final'}->{$_}->{'path'}] Failed to write, $err";
-			return 0;
-		}
-    }
-
-    return 1;
-}
-
-sub compress {
-	my $obj = shift;
-
-	lock $obj;
-
-	foreach (keys %{ $main::options{'format'} }) {
-        next if $main::options{'format'}{$_}{'type'} ne 'photo';
-        next if not defined $main::options{'format'}{$_}{'compress'};
-		next if defined $obj->{'final'}->{$_}->{'exist'} and $main::options{'overwrite'} eq 'false';
-
-		print "[$obj->{'final'}->{$_}->{'path'}] Compressing...\n" if $main::options{'verbose'} eq 'true';
-
-		my $image = new Image::Magick;
-		if (my $err = $image->Read($obj->{'final'}->{$_}->{'path'})){
-			warn "[$obj->{'final'}->{$_}->{'path'}] Failed to read, $err";
-			return 0;
-		}
-		if (my $err = $image->Write(filename => $obj->{'final'}->{$_}->{'path'}, quality => $main::options{'format'}{$_}{'compress'})) {
-			warn "[$obj->{'final'}->{$_}->{'path'}] Failed to write, $err";
-			return 0;
-		}
-    }
-
-    return 1;
 }
 
 sub strip {

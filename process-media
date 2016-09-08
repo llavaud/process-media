@@ -85,7 +85,7 @@ $queue_todo->enqueue($_) for @objects;
 
 # start threads
 while ($options{'max_threads'} >= 1) {
-    push @threads, threads->new(\&process);
+    push @threads, threads->new(\&thread);
     $options{'max_threads'}--;
 }
 
@@ -110,7 +110,7 @@ exit 0;
 
 ## FUNCTIONS
 
-sub process {
+sub thread {
 
     $SIG{'INT'} = sub { threads->exit(); };
 
@@ -123,9 +123,7 @@ sub process {
             $obj->exist();
             if (ref($obj) eq 'Photo') {
                 $obj->create();
-                $obj->rotate();
-                $obj->resize();
-                $obj->compress();
+                $obj->process();
                 $obj->strip();
             }
             elsif (ref($obj) eq 'Video') {
@@ -242,7 +240,7 @@ sub check_conf {
 
             # resize
             die "Bad format options '$_' in config file\n"
-                if $_ eq 'resize' and $conf->[1]->{$fname}->{$_} !~ /^[\dx><]+$/;
+                if $_ eq 'resize' and $conf->[1]->{$fname}->{$_} !~ /^\d+$/;
 
             # strip
             if ($_ eq 'strip') {

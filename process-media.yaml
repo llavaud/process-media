@@ -25,7 +25,7 @@ archive_photo:
 web_photo:
   type: 'photo'
   rotate: true
-  resize: '1920x1920>'
+  resize: '1920'
   compress: 90
   strip:
       - 'orientation'
@@ -42,7 +42,7 @@ web_video:
   type: 'video'
   codec: 'x264'
   reencode: true
-  resize: '1024x1024>'
+  resize: '1024'
   strip: true
   output_dir: 'web'
 
