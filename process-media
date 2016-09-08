@@ -223,6 +223,10 @@ sub check_conf {
             if $_ eq 'overwrite' and $conf->[0]->{$_} !~ /^(true|false)$/;
     }
 
+    foreach ('overwrite', 'max_threads', 'keep_name', 'verbose') {
+        die "Miss option '$_' in config file\n" if not defined $conf->[0]->{$_};
+    }
+
     # format
     foreach my $fname (keys %{ $conf->[1] }) {
         die "Bad format name '$fname' in config file" if $fname !~ /^[\w-]+$/;
@@ -232,45 +236,47 @@ sub check_conf {
                 if $_ !~ /^(output_dir|type|rotate|compress|strip|resize|codec|reencode|thumbnail)$/;
 
             # type
-            die "Bad format options '$_' in config file\n"
+            die "Bad option '$_' for format '$fname' in config file\n"
                 if $_ eq 'type' and $conf->[1]->{$fname}->{$_} !~ /^(photo|video)$/;
 
             # output_dir
-            die "Bad format options '$_' in config file\n"
+            die "Bad option '$_' for format '$fname' in config file\n"
                 if $_ eq 'output_dir' and $conf->[1]->{$fname}->{$_} !~ /^[\w-]+$/;
 
             # rotate
-            die "Bad format options '$_' in config file\n"
+            die "Bad option '$_' for format '$fname' in config file\n"
                 if $_ eq 'rotate' and $conf->[1]->{$fname}->{$_} !~ /^(true|false)$/;
 
             # reencode
-            die "Bad format options '$_' in config file\n"
+            die "Bad option '$_' for format '$fname' in config file\n"
                 if $_ eq 'reencode' and $conf->[1]->{$fname}->{$_} !~ /^(true|false)$/;
 
             # thumbnail
-            die "Bad format options '$_' in config file\n"
+            die "Bad option '$_' for format '$fname' in config file\n"
                 if $_ eq 'thumbnail' and $conf->[1]->{$fname}->{$_} !~ /^(true|false)$/;
 
             # resize
-            die "Bad format options '$_' in config file\n"
+            die "Bad option '$_' for format '$fname' in config file\n"
                 if $_ eq 'resize' and $conf->[1]->{$fname}->{$_} !~ /^\d+$/;
 
             # strip
             if ($_ eq 'strip') {
                 if (ref $conf->[1]->{$fname}->{$_} eq 'ARRAY') {
                     foreach my $tag (@{ $conf->[1]->{$fname}->{$_} }) {
-                        die "Bad format strip tag '$tag' in config file\n" if $tag !~ /^(gps|orientation)$/;
+                        die "Bad strip option tag '$tag' for format '$fname' in config file\n" if $tag !~ /^(gps|orientation)$/;
                     }
                 } else {
-                    die "Bad format options '$_' in config file\n"
+                    die "Bad option '$_' for format '$fname' in config file\n"
                         if  $conf->[1]->{$fname}->{$_} !~ /^(true|false)$/;
                 }
             }
 
             # compress
-            die "Bad format options '$_' in config file\n"
+            die "Bad option '$_' for format '$fname' in config file\n"
                 if $_ eq 'compress' and $conf->[1]->{$fname}->{$_} !~ /^\d+$/ and $conf->[1]->{$fname}->{$_} > 100;
         }
+
+        die "No type defined for format '$fname' in config file\n" if not defined $conf->[1]->{$fname}->{'type'};
     }
 
     return 1;
@@ -285,6 +291,11 @@ sub check_params {
         foreach (split(',', $opts->{'type'})) {
             die "Bad type of files to process: $_, see help (-h) for supported type\n"
                 if !/^(photo|video)$/;
+            my $found = 0;
+            foreach my $k (keys %{ $conf->[1] }) {
+                $found = 1 if $conf->[1]->{$k}->{'type'} eq $_;
+            }
+            die "No format found with type '$_'\n" if not $found;
         }
     }
 
