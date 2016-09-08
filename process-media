@@ -193,8 +193,6 @@ sub set_options {
 		}
 	}
 
-
-    print Dumper(\%options);
     die "No format found with your type and format combination\n"
         if not exists $options{'format'};
 
