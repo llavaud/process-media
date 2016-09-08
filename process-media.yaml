@@ -49,7 +49,7 @@ archive_video:
   # use the x264 video codec (it is the default)
   # for now only support the "x264" and "x265" video codec
   codec: 'x264'
-  output_dir: 'archive'
+  output_dir: 'archive/videos'
 
 web_video:
   type: 'video'
@@ -59,5 +59,5 @@ web_video:
   strip: true
   # we want to generate a thumbnail image
   thumbnail: true
-  output_dir: 'web'
+  output_dir: 'web/videos'
 

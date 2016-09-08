@@ -43,7 +43,13 @@ sub init {
         next if $main::options{'format'}{$_}{'type'} ne 'photo';
         $obj->{'final'}->{$_} = &share({});
         if (defined $main::options{'format'}{$_}{'output_dir'}) {
-            $obj->{'final'}->{$_}->{'dir'} = $obj->{'original'}->{'dir'}.$main::options{'format'}{$_}{'output_dir'}.'/';
+            $main::options{'format'}{$_}{'output_dir'} =~ s/\/+$//;
+            # absolute path
+            if ($main::options{'format'}{$_}{'output_dir'} =~ /^\//) {
+                $obj->{'final'}->{$_}->{'dir'} = $main::options{'format'}{$_}{'output_dir'}.'/';
+            } else {
+                $obj->{'final'}->{$_}->{'dir'} = $obj->{'original'}->{'dir'}.$main::options{'format'}{$_}{'output_dir'}.'/';
+            }
         } else {
             $obj->{'final'}->{$_}->{'dir'} = $obj->{'original'}->{'dir'}.$_.'/';
         }

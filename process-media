@@ -240,7 +240,7 @@ sub check_conf {
 
             # output_dir
             die "Bad option '$_' for format '$fname' in config file\n"
-                if $_ eq 'output_dir' and $conf->[1]->{$fname}->{$_} !~ /^[\w-]+$/;
+                if $_ eq 'output_dir' and $conf->[1]->{$fname}->{$_} !~ /^[\w\-\/\.]+$/;
 
             # rotate
             die "Bad option '$_' for format '$fname' in config file\n"
