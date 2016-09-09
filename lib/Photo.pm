@@ -56,7 +56,7 @@ sub init {
         }
     }
 
-    $obj->{'final'}->{'extension'} = lc $obj->{'original'}->{'extension'};
+    $obj->{'final'}->{'extension'} = '.jpg';
 
     return 1;
 }
@@ -79,10 +79,10 @@ sub get_name {
 
         my $t = Time::Piece->strptime($info->{'CreateDate'}, "%Y:%m:%d %H:%M:%S");
         $obj->{'final'}->{'name'} = $t->ymd('').'-'.$t->hms('');
-    }
 
-    print "[$obj->{'original'}->{'path'}] Rename to \'$obj->{'final'}->{'name'}\'\n"
-        if $main::OPTIONS{'verbose'} eq 'true';
+        print "[$obj->{'original'}->{'path'}] Renamed to \'$obj->{'final'}->{'name'}\'\n"
+            if $main::OPTIONS{'verbose'} eq 'true';
+    }
 
     # set final path
     foreach (keys %{ $main::OPTIONS{'format'} }) {
@@ -100,11 +100,11 @@ sub exist {
 
     lock $obj;
 
-    print "$obj->{'original'}->{'path'} -> $obj->{'final'}->{'name'}\n"
-        if $main::OPTIONS{'verbose'} eq 'false' and $main::OPTIONS{'batch'} ne 'true';
-
     foreach (keys %{ $main::OPTIONS{'format'} }) {
         next if $main::OPTIONS{'format'}{$_}{'type'} ne 'photo';
+
+        print "$obj->{'original'}->{'path'} -> $obj->{'final'}->{$_}->{'path'}\n"
+            if $main::OPTIONS{'verbose'} eq 'false' and $main::OPTIONS{'batch'} ne 'true';
 
         if (-f $obj->{'final'}->{$_}->{'path'}) {
             print "[$obj->{'final'}->{$_}->{'path'}] Already exist...\n"
@@ -128,7 +128,7 @@ sub create {
 
         print "[$obj->{'final'}->{$_}->{'path'}] Creating...\n" if $main::OPTIONS{'verbose'} eq 'true';
 
-        make_path $obj->{'final'}->{$_}->{'dir'} unless -d $obj->{'final'}->{$_}->{'dir'};
+        make_path $obj->{'final'}->{$_}->{'dir'} if not -d $obj->{'final'}->{$_}->{'dir'};
         copy("$obj->{'original'}->{'path'}", "$obj->{'final'}->{$_}->{'path'}");
     }
 
@@ -152,7 +152,7 @@ sub process {
             return 0;
         }
         # physically rotate image according to the exif orientation tag
-        if ($main::OPTIONS{'format'}{$_}{'rotate'} eq 'true' and
+        if (defined $main::OPTIONS{'format'}{$_}{'rotate'} and $main::OPTIONS{'format'}{$_}{'rotate'} eq 'true' and
             my $err = $image->AutoOrient()) {
             carp "[$obj->{'final'}->{$_}->{'path'}] Failed to auto-orient, $err";
             return 0;
@@ -185,15 +185,15 @@ sub strip {
 
     foreach my $fname (keys %{ $main::OPTIONS{'format'} }) {
         next if $main::OPTIONS{'format'}{$fname}{'type'} ne 'photo';
-        next if not defined $main::OPTIONS{'format'}{$fname}{'strip'};
+        next if not defined $main::OPTIONS{'format'}{$fname}{'strip'} or
+                            $main::OPTIONS{'format'}{$fname}{'strip'} eq 'false';
         next if defined $obj->{'final'}->{$fname}->{'exist'} and $main::OPTIONS{'overwrite'} eq 'false';
 
         print "[$obj->{'final'}->{$fname}->{'path'}] Stripping...\n" if $main::OPTIONS{'verbose'} eq 'true';
 
         # remove all tags
         my $exif = Image::ExifTool->new();
-        my ($ret, $err);
-        ($ret, $err) = $exif->SetNewValue('*');
+        my ($ret, $err) = $exif->SetNewValue('*');
         if (defined $err) {
             carp "[$obj->{'final'}->{$fname}->{'path'}] Failed to remove tags, $err";
             return 0;

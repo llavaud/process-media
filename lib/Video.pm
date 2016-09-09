@@ -56,7 +56,7 @@ sub init {
         }
     }
 
-    $obj->{'final'}->{'extension'} = lc $obj->{'original'}->{'extension'};
+    $obj->{'final'}->{'extension'} = '.mp4';
 
     return 1;
 }
@@ -80,10 +80,10 @@ sub get_name {
         my $t = Time::Piece->strptime($info->{'CreateDate'}, "%Y:%m:%d %H:%M:%S");
         $t += $t->localtime->tzoffset;
         $obj->{'final'}->{'name'} = $t->ymd('').'-'.$t->hms('');
-    }
 
-    print "[$obj->{'original'}->{'path'}] Rename to \'$obj->{'final'}->{'name'}\'\n"
-        if $main::OPTIONS{'verbose'} eq 'true';
+        print "[$obj->{'original'}->{'path'}] Renamed to \'$obj->{'final'}->{'name'}\'\n"
+            if $main::OPTIONS{'verbose'} eq 'true';
+    }
 
     # set final path
     foreach (keys %{ $main::OPTIONS{'format'} }) {
@@ -101,11 +101,11 @@ sub exist {
 
     lock $obj;
 
-    print "$obj->{'original'}->{'path'} -> $obj->{'final'}->{'name'}\n"
-        if $main::OPTIONS{'verbose'} eq 'false' and $main::OPTIONS{'batch'} ne 'true';
-
     foreach (keys %{ $main::OPTIONS{'format'} }) {
         next if $main::OPTIONS{'format'}{$_}{'type'} ne 'video';
+
+        print "$obj->{'original'}->{'path'} -> $obj->{'final'}->{$_}->{'path'}\n"
+            if $main::OPTIONS{'verbose'} eq 'false' and $main::OPTIONS{'batch'} ne 'true';
 
         if (-f $obj->{'final'}->{$_}->{'path'}) {
             print "[$obj->{'final'}->{$_}->{'path'}] Already exist...\n"
@@ -129,7 +129,7 @@ sub create {
 
         print "[$obj->{'final'}->{$_}->{'path'}] Creating...\n" if $main::OPTIONS{'verbose'} eq 'true';
 
-        make_path $obj->{'final'}->{$_}->{'dir'} unless -d $obj->{'final'}->{$_}->{'dir'};
+        make_path $obj->{'final'}->{$_}->{'dir'} if not -d $obj->{'final'}->{$_}->{'dir'};
         copy("$obj->{'original'}->{'path'}", "$obj->{'final'}->{$_}->{'path'}");
     }
 
@@ -143,7 +143,7 @@ sub process {
 
     foreach (keys %{ $main::OPTIONS{'format'} }) {
         next if $main::OPTIONS{'format'}{$_}{'type'} ne 'video';
-        next if defined $main::OPTIONS{'format'}{$_}{'reencode'} and $main::OPTIONS{'format'}{$_}{'reencode'} eq 'false';
+        next if not defined $main::OPTIONS{'format'}{$_}{'reencode'} or $main::OPTIONS{'format'}{$_}{'reencode'} eq 'false';
         next if defined $obj->{'final'}->{$_}->{'exist'} and $main::OPTIONS{'overwrite'} eq 'false';
 
         print "[$obj->{'final'}->{$_}->{'path'}] Processing...\n" if $main::OPTIONS{'verbose'} eq 'true';
@@ -173,7 +173,7 @@ sub strip {
 
     foreach (keys %{ $main::OPTIONS{'format'} }) {
         next if $main::OPTIONS{'format'}{$_}{'type'} ne 'video';
-        next if not defined $main::OPTIONS{'format'}{$_}{'strip'};
+        next if not defined $main::OPTIONS{'format'}{$_}{'strip'} or $main::OPTIONS{'format'}{$_}{'strip'} eq 'false';
         next if defined $obj->{'final'}->{$_}->{'exist'} and $main::OPTIONS{'overwrite'} eq 'false';
 
         print "[$obj->{'final'}->{$_}->{'path'}] Stripping...\n" if $main::OPTIONS{'verbose'} eq 'true';
