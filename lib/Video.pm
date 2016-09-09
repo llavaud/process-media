@@ -3,6 +3,7 @@ package Video;
 use strict;
 use warnings;
 
+use Carp qw/carp/;
 use File::Basename qw/fileparse/;
 use File::Copy qw/copy/;
 use File::Path qw/make_path/;
@@ -39,16 +40,16 @@ sub init {
     $obj->{'original'}->{'extension'} = $ext;
 
     # set final dir
-    foreach (keys %{ $main::options{'format'} }) {
-        next if $main::options{'format'}{$_}{'type'} ne 'video';
+    foreach (keys %{ $main::OPTIONS{'format'} }) {
+        next if $main::OPTIONS{'format'}{$_}{'type'} ne 'video';
         $obj->{'final'}->{$_} = &share({});
-        if (defined $main::options{'format'}{$_}{'output_dir'}) {
-            $main::options{'format'}{$_}{'output_dir'} =~ s/\/+$//;
+        if (defined $main::OPTIONS{'format'}{$_}{'output_dir'}) {
+            $main::OPTIONS{'format'}{$_}{'output_dir'} =~ s/\/+$//;
             # absolute path
-            if ($main::options{'format'}{$_}{'output_dir'} =~ /^\//) {
-                $obj->{'final'}->{$_}->{'dir'} = $main::options{'format'}{$_}{'output_dir'}.'/';
+            if ($main::OPTIONS{'format'}{$_}{'output_dir'} =~ /^\//) {
+                $obj->{'final'}->{$_}->{'dir'} = $main::OPTIONS{'format'}{$_}{'output_dir'}.'/';
             } else {
-                $obj->{'final'}->{$_}->{'dir'} = $obj->{'original'}->{'dir'}.$main::options{'format'}{$_}{'output_dir'}.'/';
+                $obj->{'final'}->{$_}->{'dir'} = $obj->{'original'}->{'dir'}.$main::OPTIONS{'format'}{$_}{'output_dir'}.'/';
             }
         } else {
             $obj->{'final'}->{$_}->{'dir'} = $obj->{'original'}->{'dir'}.$_.'/';
@@ -60,19 +61,19 @@ sub init {
     return 1;
 }
 
-sub rename {
+sub get_name {
     my $obj = shift;
 
     lock $obj;
 
-    if ($main::options{'keep_name'} eq 'true') {
+    if ($main::OPTIONS{'keep_name'} eq 'true') {
         $obj->{'final'}->{'name'} = $obj->{'original'}->{'name'};
     }
     else {
         my $info = ImageInfo($obj->{'original'}->{'path'}, 'CreateDate');
 
         if (not exists $info->{'CreateDate'}) {
-            warn "[$obj->{'original'}->{'path'}] Failed to get capture time";
+            carp "[$obj->{'original'}->{'path'}] Failed to get capture time";
             return 0;
         }
 
@@ -82,11 +83,11 @@ sub rename {
     }
 
     print "[$obj->{'original'}->{'path'}] Rename to \'$obj->{'final'}->{'name'}\'\n"
-        if $main::options{'verbose'} eq 'true';
+        if $main::OPTIONS{'verbose'} eq 'true';
 
     # set final path
-    foreach (keys %{ $main::options{'format'} }) {
-        next if $main::options{'format'}{$_}{'type'} ne 'video';
+    foreach (keys %{ $main::OPTIONS{'format'} }) {
+        next if $main::OPTIONS{'format'}{$_}{'type'} ne 'video';
         $obj->{'final'}->{$_}->{'path'} = $obj->{'final'}->{$_}->{'dir'}
                                          .$obj->{'final'}->{'name'}
                                          .$obj->{'final'}->{'extension'};
@@ -101,14 +102,14 @@ sub exist {
     lock $obj;
 
     print "$obj->{'original'}->{'path'} -> $obj->{'final'}->{'name'}\n"
-        if $main::options{'verbose'} eq 'false' and $main::options{'batch'} ne 'true';
+        if $main::OPTIONS{'verbose'} eq 'false' and $main::OPTIONS{'batch'} ne 'true';
 
-    foreach (keys %{ $main::options{'format'} }) {
-        next if $main::options{'format'}{$_}{'type'} ne 'video';
+    foreach (keys %{ $main::OPTIONS{'format'} }) {
+        next if $main::OPTIONS{'format'}{$_}{'type'} ne 'video';
 
         if (-f $obj->{'final'}->{$_}->{'path'}) {
             print "[$obj->{'final'}->{$_}->{'path'}] Already exist...\n"
-                if $main::options{'overwrite'} eq 'false';
+                if $main::OPTIONS{'overwrite'} eq 'false';
 
             $obj->{'final'}->{$_}->{'exist'} = 1;
         }
@@ -122,11 +123,11 @@ sub create {
 
     lock $obj;
 
-    foreach (keys %{ $main::options{'format'} }) {
-        next if $main::options{'format'}{$_}{'type'} ne 'video';
-        next if defined $obj->{'final'}->{$_}->{'exist'} and $main::options{'overwrite'} eq 'false';
+    foreach (keys %{ $main::OPTIONS{'format'} }) {
+        next if $main::OPTIONS{'format'}{$_}{'type'} ne 'video';
+        next if defined $obj->{'final'}->{$_}->{'exist'} and $main::OPTIONS{'overwrite'} eq 'false';
 
-        print "[$obj->{'final'}->{$_}->{'path'}] Creating...\n" if $main::options{'verbose'} eq 'true';
+        print "[$obj->{'final'}->{$_}->{'path'}] Creating...\n" if $main::OPTIONS{'verbose'} eq 'true';
 
         make_path $obj->{'final'}->{$_}->{'dir'} unless -d $obj->{'final'}->{$_}->{'dir'};
         copy("$obj->{'original'}->{'path'}", "$obj->{'final'}->{$_}->{'path'}");
@@ -140,21 +141,21 @@ sub process {
 
     lock $obj;
 
-    foreach (keys %{ $main::options{'format'} }) {
-        next if $main::options{'format'}{$_}{'type'} ne 'video';
-        next if defined $main::options{'format'}{$_}{'reencode'} and $main::options{'format'}{$_}{'reencode'} eq 'false';
-        next if defined $obj->{'final'}->{$_}->{'exist'} and $main::options{'overwrite'} eq 'false';
+    foreach (keys %{ $main::OPTIONS{'format'} }) {
+        next if $main::OPTIONS{'format'}{$_}{'type'} ne 'video';
+        next if defined $main::OPTIONS{'format'}{$_}{'reencode'} and $main::OPTIONS{'format'}{$_}{'reencode'} eq 'false';
+        next if defined $obj->{'final'}->{$_}->{'exist'} and $main::OPTIONS{'overwrite'} eq 'false';
 
-        print "[$obj->{'final'}->{$_}->{'path'}] Processing...\n" if $main::options{'verbose'} eq 'true';
+        print "[$obj->{'final'}->{$_}->{'path'}] Processing...\n" if $main::OPTIONS{'verbose'} eq 'true';
 
 		my $cmd = "ffmpeg -nostdin -hide_banner -y -loglevel warning -i $obj->{'original'}->{'path'} -codec:a copy -flags +global_header";
 
-		if (defined $main::options{'format'}{$_}{'codec'} and $main::options{'format'}{$_}{'codec'} eq 'x265') {
+		if (defined $main::OPTIONS{'format'}{$_}{'codec'} and $main::OPTIONS{'format'}{$_}{'codec'} eq 'x265') {
 			$cmd .= " -codec:v libx265 -x265-params crf=23:log-level=error";
 		}
 
-		if (defined $main::options{'format'}{$_}{'resize'}) {
-            $cmd .= " -vf \"scale='if(gt(iw,ih),$main::options{'format'}{$_}{'resize'},trunc(oh*a/2)*2)':'if(gt(iw,ih),trunc(ow/a/2)*2,$main::options{'format'}{$_}{'resize'})'\"";
+		if (defined $main::OPTIONS{'format'}{$_}{'resize'}) {
+            $cmd .= " -vf \"scale='if(gt(iw,ih),$main::OPTIONS{'format'}{$_}{'resize'},trunc(oh*a/2)*2)':'if(gt(iw,ih),trunc(ow/a/2)*2,$main::OPTIONS{'format'}{$_}{'resize'})'\"";
         }
 
         $cmd .= " $obj->{'final'}->{$_}->{'path'}";
@@ -170,22 +171,22 @@ sub strip {
 
     lock $obj;
 
-    foreach (keys %{ $main::options{'format'} }) {
-        next if $main::options{'format'}{$_}{'type'} ne 'video';
-        next if not defined $main::options{'format'}{$_}{'strip'};
-        next if defined $obj->{'final'}->{$_}->{'exist'} and $main::options{'overwrite'} eq 'false';
+    foreach (keys %{ $main::OPTIONS{'format'} }) {
+        next if $main::OPTIONS{'format'}{$_}{'type'} ne 'video';
+        next if not defined $main::OPTIONS{'format'}{$_}{'strip'};
+        next if defined $obj->{'final'}->{$_}->{'exist'} and $main::OPTIONS{'overwrite'} eq 'false';
 
-        print "[$obj->{'final'}->{$_}->{'path'}] Stripping...\n" if $main::options{'verbose'} eq 'true';
+        print "[$obj->{'final'}->{$_}->{'path'}] Stripping...\n" if $main::OPTIONS{'verbose'} eq 'true';
 
         # remove all tags
-        my $exif = new Image::ExifTool;
+        my $exif = Image::ExifTool->new();
         my ($ret, $err) = $exif->SetNewValue('*');
         if (defined $err) {
-            warn "[$obj->{'final'}->{$_}->{'path'}] Failed to remove tags, $err";
+            carp "[$obj->{'final'}->{$_}->{'path'}] Failed to remove tags, $err";
             return 0;
         }
         unless ($exif->WriteInfo($obj->{'final'}->{$_}->{'path'})) {
-            warn "[$obj->{'final'}->{$_}->{'path'}] Failed to write, ".$exif->GetValue('Error');
+            carp "[$obj->{'final'}->{$_}->{'path'}] Failed to write, ".$exif->GetValue('Error');
             return 0;
         }
     }
@@ -198,26 +199,26 @@ sub thumbnail {
 
     lock $obj;
 
-    foreach (keys %{ $main::options{'format'} }) {
-        next if $main::options{'format'}{$_}{'type'} ne 'video';
-        next if not defined $main::options{'format'}{$_}{'thumbnail'} or $main::options{'format'}{$_}{'thumbnail'} eq 'false';
-        next if defined $obj->{'final'}->{$_}->{'exist'} and $main::options{'overwrite'} eq 'false';
+    foreach (keys %{ $main::OPTIONS{'format'} }) {
+        next if $main::OPTIONS{'format'}{$_}{'type'} ne 'video';
+        next if not defined $main::OPTIONS{'format'}{$_}{'thumbnail'} or $main::OPTIONS{'format'}{$_}{'thumbnail'} eq 'false';
+        next if defined $obj->{'final'}->{$_}->{'exist'} and $main::OPTIONS{'overwrite'} eq 'false';
 
-        print "[$obj->{'final'}->{$_}->{'path'}] Generating thumbnail...\n" if $main::options{'verbose'} eq 'true';
+        print "[$obj->{'final'}->{$_}->{'path'}] Generating thumbnail...\n" if $main::OPTIONS{'verbose'} eq 'true';
 
         &execute($obj->{'final'}->{$_}->{'path'}, 'Failed to create thumbnail', "ffmpeg -y -loglevel error -i $obj->{'final'}->{$_}->{'path'} -vframes 1 $obj->{'final'}->{$_}->{'dir'}$obj->{'final'}->{'name'}.jpg");
 
-        my $image = new Image::Magick;
+        my $image = Image::Magick->new();
         if (my $err = $image->Read("$obj->{'final'}->{$_}->{'dir'}$obj->{'final'}->{'name'}.jpg")){
-            warn "[$obj->{'final'}->{$_}->{'dir'}$obj->{'final'}->{'name'}.jpg] Failed to read, $err";
+            carp "[$obj->{'final'}->{$_}->{'dir'}$obj->{'final'}->{'name'}.jpg] Failed to read, $err";
             return 0;
         }
         if (my $err = $image->Strip()){
-            warn "[$obj->{'final'}->{$_}->{'dir'}$obj->{'final'}->{'name'}.jpg] Failed to strip, $err";
+            carp "[$obj->{'final'}->{$_}->{'dir'}$obj->{'final'}->{'name'}.jpg] Failed to strip, $err";
             return 0;
         }
         if (my $err = $image->Write(filename => "$obj->{'final'}->{$_}->{'dir'}$obj->{'final'}->{'name'}.jpg", quality => 90)) {
-            warn "[$obj->{'final'}->{$_}->{'dir'}$obj->{'final'}->{'name'}.jpg] Failed to write, $err";
+            carp "[$obj->{'final'}->{$_}->{'dir'}$obj->{'final'}->{'name'}.jpg] Failed to write, $err";
             return 0;
         }
     }
@@ -230,11 +231,11 @@ sub integrity {
 
     lock $obj;
 
-    foreach (keys %{ $main::options{'format'} }) {
-        next if $main::options{'format'}{$_}{'type'} ne 'video';
-        next if defined $obj->{'final'}->{$_}->{'exist'} and $main::options{'overwrite'} eq 'false';
+    foreach (keys %{ $main::OPTIONS{'format'} }) {
+        next if $main::OPTIONS{'format'}{$_}{'type'} ne 'video';
+        next if defined $obj->{'final'}->{$_}->{'exist'} and $main::OPTIONS{'overwrite'} eq 'false';
 
-        print "[$obj->{'final'}->{$_}->{'path'}] Checking integrity...\n" if $main::options{'verbose'} eq 'true';
+        print "[$obj->{'final'}->{$_}->{'path'}] Checking integrity...\n" if $main::OPTIONS{'verbose'} eq 'true';
 
         &execute($obj->{'final'}->{$_}->{'path'}, 'File is corrupted', "ffmpeg -loglevel error -i $obj->{'final'}->{$_}->{'path'} -f null -");
     }
@@ -279,7 +280,7 @@ sub execute {
             threads->exit();
         }
         if ($exit_status != 0) {
-            warn "[$file] $msg, $!";
+            carp "[$file] $msg, $!";
             return 0;
         }
     }

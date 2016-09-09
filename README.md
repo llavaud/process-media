@@ -13,5 +13,6 @@ It needs the following ubuntu packages installed:
 *   jpeginfo
 *   libimage-exiftool-perl
 *   libimage-magick-perl
+*   libmime-types-perl
 *   libsys-cpu-perl
 *   libterm-readkey-perl

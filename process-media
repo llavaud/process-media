@@ -20,8 +20,8 @@ use lib './lib';
 use Photo;
 use Video;
 
-$SIG{'INT'}  = \&sig_handler;
-$SIG{'TERM'} = \&sig_handler;
+local $SIG{'INT'}  = \&sig_handler;
+local $SIG{'TERM'} = \&sig_handler;
 
 ## VARS
 
@@ -30,7 +30,7 @@ my $path;
 my @threads;
 my @objects;
 my $opts = {};
-our %options;
+our %OPTIONS;
 
 ## MAIN
 
@@ -57,10 +57,10 @@ GetOptions(
 &get_objects();
 
 if (scalar @objects == 0) {
-    print "No files to process, Exiting...\n" if $options{'batch'} eq 'false';
+    print "No files to process, Exiting...\n" if $OPTIONS{'batch'} eq 'false';
     exit 0;
 } else {
-    if ($options{'batch'} eq 'false') {
+    if ($OPTIONS{'batch'} eq 'false') {
         print "Found ".scalar @objects." files...\n";
         ReadMode 4;
         my $key = '';
@@ -76,16 +76,16 @@ if (scalar @objects == 0) {
     }
 }
 
-my $queue_todo = new Thread::Queue;
-my $queue_done = new Thread::Queue;
+my $queue_todo = Thread::Queue->new();
+my $queue_done = Thread::Queue->new();
 
 my $run: shared = 1;
 $queue_todo->enqueue($_) for @objects;
 
 # start threads
-while ($options{'max_threads'} >= 1) {
+while ($OPTIONS{'max_threads'} >= 1) {
     push @threads, threads->new(\&thread);
-    $options{'max_threads'}--;
+    $OPTIONS{'max_threads'}--;
 }
 
 # wait first run to finish
@@ -109,11 +109,11 @@ exit 0;
 
 sub thread {
 
-    $SIG{'INT'} = sub { threads->exit(); };
+    local $SIG{'INT'} = sub { threads->exit(); };
 
     while (my $obj = $queue_todo->dequeue) {
         if ($run == 1) {
-            $obj->rename();
+            $obj->get_name();
             $queue_done->enqueue($obj)
         }
         elsif ($run == 2) {
@@ -126,7 +126,7 @@ sub thread {
         }
     }
 
-    threads->exit();
+    return 1;
 }
 
 sub sig_handler {
@@ -146,24 +146,24 @@ sub set_options {
 
     # max_threads
     if (defined $opts->{'max_threads'}) {
-        $options{'max_threads'} = ($opts->{'max_threads'} == 0) ? Sys::CPU::cpu_count() : $opts->{'max_threads'};
+        $OPTIONS{'max_threads'} = ($opts->{'max_threads'} == 0) ? Sys::CPU::cpu_count() : $opts->{'max_threads'};
     } else {
-        $options{'max_threads'} = ($conf->[0]->{'max_threads'} == 0) ? Sys::CPU::cpu_count() : $conf->[0]->{'max_threads'};
+        $OPTIONS{'max_threads'} = ($conf->[0]->{'max_threads'} == 0) ? Sys::CPU::cpu_count() : $conf->[0]->{'max_threads'};
     }
 
     # verbose
-    $options{'verbose'} = $opts->{'verbose'} ? 'true' : $conf->[0]->{'verbose'};
+    $OPTIONS{'verbose'} = $opts->{'verbose'} ? 'true' : $conf->[0]->{'verbose'};
     
     # overwrite
-    $options{'overwrite'} = $opts->{'overwrite'} ? 'true' : $conf->[0]->{'overwrite'};
+    $OPTIONS{'overwrite'} = $opts->{'overwrite'} ? 'true' : $conf->[0]->{'overwrite'};
 
     # keep_name
-    $options{'keep_name'} = $opts->{'keep_name'} ? 'true' : $conf->[0]->{'keep_name'};
+    $OPTIONS{'keep_name'} = $opts->{'keep_name'} ? 'true' : $conf->[0]->{'keep_name'};
 
     # batch
-    $options{'batch'} = $opts->{'batch'} ? 'true' : 'false';
+    $OPTIONS{'batch'} = $opts->{'batch'} ? 'true' : 'false';
 
-    $options{'type'} = $opts->{'type'} // '';
+    $OPTIONS{'type'} = $opts->{'type'} // '';
 
     if (not defined $opts->{'type'}) {
         if (defined $opts->{'format'}) {
@@ -171,34 +171,34 @@ sub set_options {
             foreach (split(',', $opts->{'format'})) {
                 $t{$conf->[1]->{$_}->{'type'}} = 1;
             }
-            $options{'type'} = join(',', keys %t);
+            $OPTIONS{'type'} = join(',', keys %t);
         } else {
             my %t;
             foreach (keys %{ $conf->[1] }) {
                 $t{$conf->[1]->{$_}->{'type'}} = 1;
             }
-            $options{'type'} = join(',', keys %t);
+            $OPTIONS{'type'} = join(',', keys %t);
         }
     }
 
 	if (defined $opts->{'format'}) {
         foreach my $fname (split(',', $opts->{'format'})) {
-			foreach my $t (split(',', $options{'type'})) {
-				$options{'format'}{$fname} = $conf->[1]->{$fname}
+			foreach my $t (split(',', $OPTIONS{'type'})) {
+				$OPTIONS{'format'}{$fname} = $conf->[1]->{$fname}
 					if $conf->[1]->{$fname}->{'type'} eq $t;
 			}
         }
     } else {
 		foreach my $fname (keys %{ $conf->[1] }) {
-			foreach my $t (split(',', $options{'type'})) {
-				$options{'format'}{$fname} = $conf->[1]->{$fname}
+			foreach my $t (split(',', $OPTIONS{'type'})) {
+				$OPTIONS{'format'}{$fname} = $conf->[1]->{$fname}
 					if $conf->[1]->{$fname}->{'type'} eq $t;
 			}
 		}
 	}
 
     die "No format found with your type and format combination\n"
-        if not exists $options{'format'};
+        if not exists $OPTIONS{'format'};
 
 	return 1;
 }
@@ -208,7 +208,7 @@ sub check_conf {
     # options
     foreach (keys %{ $conf->[0] }) {
         die "Unknown options '$_' in config file\n"
-            if $_ !~ /^(overwrite|max_threads|keep_name|verbose)$/;
+            if $_ !~ /^(?:overwrite|max_threads|keep_name|verbose)$/;
 
         # max_threads
         die "Miss/Bad value for '$_' in config file\n"
@@ -216,15 +216,15 @@ sub check_conf {
 
         # keep_name
         die "Miss/Bad value for '$_' in config file\n"
-            if $_ eq 'keep_name' and $conf->[0]->{$_} !~ /^(true|false)$/;
+            if $_ eq 'keep_name' and $conf->[0]->{$_} !~ /^(?:true|false)$/;
 
         # verbose
         die "Miss/Bad value for '$_' in config file\n"
-            if $_ eq 'verbose' and $conf->[0]->{$_} !~ /^(true|false)$/;
+            if $_ eq 'verbose' and $conf->[0]->{$_} !~ /^(?:true|false)$/;
 
         # overwrite
         die "Miss/Bad value for '$_' in config file\n"
-            if $_ eq 'overwrite' and $conf->[0]->{$_} !~ /^(true|false)$/;
+            if $_ eq 'overwrite' and $conf->[0]->{$_} !~ /^(?:true|false)$/;
     }
 
     foreach ('overwrite', 'max_threads', 'keep_name', 'verbose') {
@@ -237,11 +237,11 @@ sub check_conf {
 
         foreach (keys %{ $conf->[1]->{$fname} }) {
             die "Unknown format options '$_' in config file\n"
-                if $_ !~ /^(output_dir|type|rotate|compress|strip|resize|codec|reencode|thumbnail)$/;
+                if $_ !~ /^(?:output_dir|type|rotate|compress|strip|resize|codec|reencode|thumbnail)$/;
 
             # type
             die "Bad option '$_' for format '$fname' in config file\n"
-                if $_ eq 'type' and $conf->[1]->{$fname}->{$_} !~ /^(photo|video)$/;
+                if $_ eq 'type' and $conf->[1]->{$fname}->{$_} !~ /^(?:photo|video)$/;
 
             # output_dir
             die "Bad option '$_' for format '$fname' in config file\n"
@@ -249,15 +249,15 @@ sub check_conf {
 
             # rotate
             die "Bad option '$_' for format '$fname' in config file\n"
-                if $_ eq 'rotate' and $conf->[1]->{$fname}->{$_} !~ /^(true|false)$/;
+                if $_ eq 'rotate' and $conf->[1]->{$fname}->{$_} !~ /^(?:true|false)$/;
 
             # reencode
             die "Bad option '$_' for format '$fname' in config file\n"
-                if $_ eq 'reencode' and $conf->[1]->{$fname}->{$_} !~ /^(true|false)$/;
+                if $_ eq 'reencode' and $conf->[1]->{$fname}->{$_} !~ /^(?:true|false)$/;
 
             # thumbnail
             die "Bad option '$_' for format '$fname' in config file\n"
-                if $_ eq 'thumbnail' and $conf->[1]->{$fname}->{$_} !~ /^(true|false)$/;
+                if $_ eq 'thumbnail' and $conf->[1]->{$fname}->{$_} !~ /^(?:true|false)$/;
 
             # resize
             die "Bad option '$_' for format '$fname' in config file\n"
@@ -267,11 +267,11 @@ sub check_conf {
             if ($_ eq 'strip') {
                 if (ref $conf->[1]->{$fname}->{$_} eq 'ARRAY') {
                     foreach my $tag (@{ $conf->[1]->{$fname}->{$_} }) {
-                        die "Bad strip option tag '$tag' for format '$fname' in config file\n" if $tag !~ /^(gps|orientation)$/;
+                        die "Bad strip option tag '$tag' for format '$fname' in config file\n" if $tag !~ /^(?:gps|orientation)$/;
                     }
                 } else {
                     die "Bad option '$_' for format '$fname' in config file\n"
-                        if  $conf->[1]->{$fname}->{$_} !~ /^(true|false)$/;
+                        if  $conf->[1]->{$fname}->{$_} !~ /^(?:true|false)$/;
                 }
             }
 
@@ -294,7 +294,7 @@ sub check_params {
     if (defined $opts->{'type'}) {
         foreach (split(',', $opts->{'type'})) {
             die "Bad type of files to process: $_, see help (-h) for supported type\n"
-                if !/^(photo|video)$/;
+                if !/^(?:photo|video)$/;
             my $found = 0;
             foreach my $k (keys %{ $conf->[1] }) {
                 $found = 1 if $conf->[1]->{$k}->{'type'} eq $_;
@@ -325,8 +325,7 @@ sub get_files {
     elsif (-d $path) {
         $path .= '/' unless $path =~ /\/$/;
         opendir my $dh, $path or die "Failed to read directory \'$path\': $!\n";
-        foreach (sort grep {!/^\./} readdir $dh) {
-            next if -d $path.$_;
+        foreach (sort grep { -f ($path.$_) && !/^\./ } readdir $dh) {
             push @files, $path.$_;
         }
         closedir $dh;
@@ -345,12 +344,12 @@ sub get_objects {
         my $obj;
         my $type = $mt->mimeTypeOf($_);
         if ($type eq 'image/jpeg') {
-            next if $options{'type'} !~ /photo/;
-            $obj = new Photo;
+            next if $OPTIONS{'type'} !~ /photo/;
+            $obj = Photo->new();
         }
         elsif ($type eq 'video/mp4') {
-            next if $options{'type'} !~ /video/;
-            $obj = new Video;
+            next if $OPTIONS{'type'} !~ /video/;
+            $obj = Video->new();
         }
         if (defined $obj) {
             $obj->init($_);
@@ -362,7 +361,7 @@ sub get_objects {
 }
 
 sub usage {
-    print<<EOF;
+    print << "EOF";
 Usage: $0 [options...] <path>
 Options:
 -t,--type\t\t{photo,video}\tType of files to process (default: photo,video)
@@ -422,6 +421,10 @@ libimage-exiftool-perl
 =item *
 
 libimage-magick-perl
+
+=item *
+
+libmime-types-perl
 
 =item *
 
