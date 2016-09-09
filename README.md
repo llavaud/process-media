@@ -12,7 +12,7 @@ This script depends on several binary or Perl library, you need to install the f
 sudo apt-get install ffmpeg jpeginfo libimage-exiftool-perl libimage-magick-perl libmime-types-perl libsys-cpu-perl libterm-readkey-perl
 ```
 
-Once the packages are installed, you just need to extract the zip/tar.gz archive and execute the **./process-media** binary
+Once the packages are installed, you just need to extract the zip/tar.gz of the [latest archive](https://github.com/llavaud/process-media/releases/latest) and execute the **./process-media** binary
 
 ## CLI
 
