@@ -162,8 +162,13 @@ sub process {
             warn "[$obj->{'final'}->{$_}->{'path'}] Failed to resize, $err";
             return 0;
         }
-        my $quality = $main::options{'format'}{$_}{'compress'} // '100';
-        if (my $err = $image->Write(filename => $obj->{'final'}->{$_}->{'path'}, quality => $quality)) {
+        my $err;
+        if (defined $main::options{'format'}{$_}{'compress'}) {
+            $err = $image->Write(filename => $obj->{'final'}->{$_}->{'path'}, quality => $main::options{'format'}{$_}{'compress'});
+        } else {
+            $err = $image->Write(filename => $obj->{'final'}->{$_}->{'path'});
+        }
+        if ($err) {
             warn "[$obj->{'final'}->{$_}->{'path'}] Failed to write, $err";
             return 0;
         }
