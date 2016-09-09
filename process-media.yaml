@@ -39,7 +39,7 @@ web_photo:
   # for now only support the tag "orientation" and "gps"
   strip:
       - 'orientation'
-      - 'gps'
+#     - 'gps'
   output_dir: 'web'
 
 archive_video:

@@ -6,6 +6,7 @@ use warnings;
 require 5.010;
 
 use Getopt::Long qw/GetOptions/;
+use MIME::Types;
 use Sys::CPU qw/cpu_count/;
 use Term::ReadKey qw/ReadKey ReadMode/;
 use threads;
@@ -30,8 +31,6 @@ my @threads;
 my @objects;
 my $opts = {};
 our %options;
-my $regex_photo = '\.je?pg$';
-my $regex_video = '\.mp4$';
 
 ## MAIN
 
@@ -327,6 +326,7 @@ sub get_files {
         $path .= '/' unless $path =~ /\/$/;
         opendir my $dh, $path or die "Failed to read directory \'$path\': $!\n";
         foreach (sort grep {!/^\./} readdir $dh) {
+            next if -d $path.$_;
             push @files, $path.$_;
         }
         closedir $dh;
@@ -339,13 +339,16 @@ sub get_objects {
 
     my @files = &get_files();
 
+    my $mt = MIME::Types->new();
+
     foreach (@files) {
         my $obj;
-        if (/$regex_photo/i) {
+        my $type = $mt->mimeTypeOf($_);
+        if ($type eq 'image/jpeg') {
             next if $options{'type'} !~ /photo/;
             $obj = new Photo;
         }
-        elsif (/$regex_video/i) {
+        elsif ($type eq 'video/mp4') {
             next if $options{'type'} !~ /video/;
             $obj = new Video;
         }
@@ -380,7 +383,7 @@ EOF
 
 =head1 NAME
 
-process_media.pl
+process-media
 
 =head1 DESCRIPTION
 
