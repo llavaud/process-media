@@ -48,7 +48,7 @@ GetOptions(
     'verbose',
     'overwrite',
     'help',
-) or die("Error in command line arguments\n");;
+) or die "Error in command line arguments\n";
 
 &check_params();
 
@@ -95,6 +95,7 @@ $queue_done->end;
 
 # search duplicate name
 'Photo'->search_duplicate(@objects);
+'Video'->search_duplicate(@objects);
 
 $run = 2;
 $queue_todo->enqueue($_) for @objects;
@@ -265,7 +266,7 @@ sub check_conf {
 
             # strip
             if ($_ eq 'strip') {
-                if (ref $conf->[1]->{$fname}->{$_} eq 'ARRAY') {
+                if (ref($conf->[1]->{$fname}->{$_}) eq 'ARRAY') {
                     foreach my $tag (@{ $conf->[1]->{$fname}->{$_} }) {
                         die "Bad strip option tag '$tag' for format '$fname' in config file\n" if $tag !~ /^(?:gps|orientation)$/;
                     }

@@ -247,8 +247,10 @@ sub search_duplicate {
     my ($class, @files) = @_;
 
     foreach my $i (0 .. $#files) {
+        next if ref($files[$i]) ne 'Video';
         my %same;
         foreach my $j (0 .. $#files) {
+            next if ref($files[$j]) ne 'Video';
             next if $i == $j;
             if ($files[$i]->{'final'}->{'name'} eq $files[$j]->{'final'}->{'name'}) {
                 $same{$i} = 1;

@@ -199,7 +199,7 @@ sub strip {
             return 0;
         }
 
-        if (ref $main::OPTIONS{'format'}{$fname}{'strip'} eq 'ARRAY') {
+        if (ref($main::OPTIONS{'format'}{$fname}{'strip'}) eq 'ARRAY') {
 
             foreach (@{ $main::OPTIONS{'format'}{$fname}{'strip'} }) {
 
@@ -253,8 +253,10 @@ sub search_duplicate {
     my ($class, @files) = @_;
 
     foreach my $i (0 .. $#files) {
+        next if ref($files[$i]) ne 'Photo';
         my %same;
         foreach my $j (0 .. $#files) {
+            next if ref($files[$j]) ne 'Photo';
             next if $i == $j;
             if ($files[$i]->{'final'}->{'name'} eq $files[$j]->{'final'}->{'name'}) {
                 $same{$i} = 1;
