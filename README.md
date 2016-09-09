@@ -2,6 +2,8 @@
 
 This script will process (resize, compress...) photos and videos according to the specified options.
 
+For now it only support **JPEG** photo and **MP4** video.
+
 ## Installation
 
 This script depends on several binary or Perl library, you need to install the following **Debian/Ubuntu** packages:
