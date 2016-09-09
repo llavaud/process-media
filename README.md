@@ -20,11 +20,11 @@ Options:
 -t,--type        {photo,video}	Type of files to process (default: photo,video)
 -f,--format      {format1,...}	Format to generate (default: all format defined in config file)
 -m,--max_threads <num_threads>	Maximum allowed threads (default: number of cpu(s)/core(s))
--k,--keep_name				Do not rename file
--v,--verbose             Verbose output
--o,--overwrite				Overwrite existing files
--b,--batch				    Run in non-interactive mode, allowing to run in a crontab
--h,--help				    This help text
+-k,--keep_name                  Do not rename file
+-v,--verbose                    Verbose output
+-o,--overwrite                  Overwrite existing files
+-b,--batch                      Run in non-interactive mode, allowing to run in a crontab
+-h,--help                       This help text
 ```
 
 ## Configuration
