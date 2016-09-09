@@ -29,7 +29,7 @@ Options:
 
 ## Configuration
 
-You must set the desired format in the configuration file `process-media.yaml`, here is an example:
+You must set the desired format in the configuration file **`process-media.yaml`**, here is an example:
 
 ```
 web_photo:
