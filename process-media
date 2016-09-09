@@ -391,51 +391,18 @@ This script will process (resize, compress...) photos and videos according to th
 
 It depends on the following linux binary:
 
-=over 4
-
-=item *
-
-ffmpeg
-
-=item *
-
-jpeginfo
-
-=back
+    * ffmpeg
+    * jpeginfo
 
 It needs the following ubuntu packages installed:
 
-=over 4
-
-=item *
-
-ffmpeg
-
-=item *
-
-jpeginfo
-
-=item *
-
-libimage-exiftool-perl
-
-=item *
-
-libimage-magick-perl
-
-=item *
-
-libmime-types-perl
-
-=item *
-
-libsys-cpu-perl
-
-=item *
-
-libterm-readkey-perl
-
-=back
+    * ffmpeg
+    * jpeginfo
+    * libimage-exiftool-perl
+    * libimage-magick-perl
+    * libmime-types-perl
+    * libsys-cpu-perl
+    * libterm-readkey-perl
 
 =head1 AUTHOR
 
