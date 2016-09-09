@@ -4,7 +4,7 @@ This script will process (resize, compress...) photos and videos according to th
 
 ## Installation
 
-This script depends on several binary or Perl library, you need to install the following Debian/Ubuntu packages:
+This script depends on several binary or Perl library, you need to install the following **Debian/Ubuntu** packages:
 
 ```bash
 sudo apt-get install ffmpeg jpeginfo libimage-exiftool-perl libimage-magick-perl libmime-types-perl libsys-cpu-perl libterm-readkey-perl
@@ -29,3 +29,21 @@ Options:
 
 ## Configuration
 
+You must set the desired format in the configuration file, here is an example:
+
+`process-media.yaml`
+
+```
+web_photo:
+  type: 'photo'
+  rotate: true
+  resize: '1920'
+  compress: 90
+  strip:
+    - 'gps'
+  output_dir: 'web'
+```
+
+Here we define a photo format named **web_photo**.
+
+The resulting photo will be auto-rotated, resized, compressed and all metadata will be removed except GPS informations.
