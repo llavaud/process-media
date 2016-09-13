@@ -41,9 +41,8 @@ Once the packages are installed, you just need to extract the archive
 
 First you need to define the different formats you want in the configuration file, the script will search for a configuration file by respecting the following order:
 
-**`/etc/process-media.yaml`**
-
-**`process-media.yaml`**
+1. **`/etc/process-media.yaml`**
+2. **`process-media.yaml`**
 
 Here is a photo format example:
 
@@ -76,3 +75,13 @@ Options:
 -b,--batch                      Run in non-interactive mode, allowing to run in a crontab
 -h,--help                       This help text
 ```
+
+### Examples
+
+If you want to convert all photos or videos in the current directory by using all defined format(s) from the configuration file:
+
+`process-media`
+
+If you want to convert all photos in the folder **/home/foo** by using the previous define format **web_photo**:
+
+`process-media /home/foo -f web_photo`
