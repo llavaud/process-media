@@ -1,3 +1,6 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA256
+
 Origin: Laurent Lavaud
 Label: Label de votre société (ou autre)
 Suite: stable
@@ -19,3 +22,20 @@ SHA256:
  a774325663350daf6c26d7495c00256acfa3d02b8dabdcd9e9cfc875737c7020 645 main/binary-amd64/Packages
  5e426f454a3652338c27a5d97c631d008877f46c3aad9c3a9828d33970f28779 438 main/binary-amd64/Packages.gz
  4f48b4799fc4207794eb81bb26cdc205b2e7df4cb1387610ce269345fd564e5b 166 main/binary-amd64/Release
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v2
+
+iQIcBAEBCAAGBQJX17SdAAoJEF0Wt+X9q1Znf6QP/jEu8JZ9cOOYs6vjzwTGnit5
+XbUOmUb4CwfHuKqC0484pH6Z1o7bS+ft4sLNpleOmrzgoIEX5MkhhRad6/HqM5Wo
+uEOpbCZr7wOuDI8utMO9bhF/nuAPjRpqSLLMbEKHTgpzgaH3gIeecira4Ql0jXZn
+RWW/UyaSqg2PcOesrJ15zsS/p16NRTjTiUt0yHuY8t9/VGXOrQisBFYMIrJFLcIC
+bp6lcmTL4RcExGIphUEGVbDcye3u52m71TfZaehrLFx89E1Fa5hkkCotyT6rIoO3
+FT8w3/Bk3kd5caKkys8B3fQXRLZ7EI6APDAR1nv63U1StQU/RmqPs2uUO72RF49g
+IMTZL+bUims3m5y+nj/FM65PTx4Nqedz9cQ4LNCp1F76ojzfz2GHjCgvre13EHEV
+J21qpbdOXny7ryBiOv7taLCufq0s32/MEcgNrsHBaqiY6Zdl/LwyVO8w2S0ha1i2
+qppjkp2umqX1rME0pOqd1FCvMxaw73yT1seFOP87RvJDBSZCRMfwHrRXngW3lODw
+K9fM08zoKYkmxLztgwlwtxoCLVn+WlSzJWxaf2DSD4kuu+ZmaNzbIwU5Q46GBiIN
+RneF35kvivrXtvTyPs9XMxX6m639hbc2rCuGWcs+nQFLVgg9T01qM91emTSgc+TI
+M5pGFzrXsyNLaWbYMkE8
+=MJYD
+-----END PGP SIGNATURE-----
