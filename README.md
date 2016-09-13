@@ -12,7 +12,6 @@ For now it only support **JPEG** photo and **MP4** video.
 * [CLI](#cli)
   * [Examples](#examples)
 
-<a name="installation"/>
 ## Installation
 
 <a name="package"/>
