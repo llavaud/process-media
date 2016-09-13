@@ -78,10 +78,10 @@ Options:
 
 ### Examples
 
-If you want to convert all photos or videos in the current directory by using all defined format(s) from the configuration file:
+* If you want to convert all photos or videos in the current directory by using all defined format(s) from the configuration file:
 
 `process-media`
 
-If you want to convert all photos in the folder **/home/foo** by using the previous define format **web_photo**:
+* If you want to convert all photos in the folder **/home/foo** by using the previous define format **web_photo**:
 
 `process-media /home/foo -f web_photo`
