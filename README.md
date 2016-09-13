@@ -14,7 +14,6 @@ For now it only support **JPEG** photo and **MP4** video.
 
 ## Installation
 
-<a name="package"/>
 ### Package (favourite)
 
 I have setup a Debian/Ubuntu apt repository to distribute this package
@@ -34,7 +33,6 @@ sudo apt-get update
 sudo apt-get install process-media
 ```
 
-<a name="archive"/>
 ### Archive
 
 If you dont want to add a new repository on your system you can also retrieve the [latest zip/tar.gz archive](https://github.com/llavaud/process-media/releases/latest)
@@ -47,7 +45,6 @@ sudo apt-get install ffmpeg jpeginfo libimage-exiftool-perl libimage-magick-perl
 
 Once the packages are installed, you just need to extract the archive
 
-<a name="configuration"/>
 ## Configuration
 
 First you need to define the different formats you want in the configuration file, the script will search for a configuration file by respecting the following order:
@@ -72,7 +69,6 @@ Here we define a photo format named **web_photo**.
 
 The resulting photo will be auto-rotated, resized, compressed and all metadata will be removed except GPS informations.
 
-<a name="cli"/>
 ## CLI
 
 ```
@@ -88,7 +84,6 @@ Options:
 -h,--help                       This help text
 ```
 
-<a name="examples"/>
 ### Examples
 
 * If you want to convert all photos or videos in the current directory by using all defined format(s) from the configuration file:
