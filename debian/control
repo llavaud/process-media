@@ -1,0 +1,16 @@
+Source: process-media
+Section: unknown
+Priority: optional
+Maintainer: Laurent Lavaud <laurentl@unknown>
+Build-Depends: debhelper (>=9)
+Standards-Version: 3.9.6
+Homepage: https://github.com/llavaud/process-media
+Vcs-Git: git@github.com:llavaud/process-media.git
+Vcs-Browser: https://github.com/llavaud/process-media
+
+Package: process-media
+Architecture: all
+Depends: ${misc:Depends}
+Description: A photos and videos processing script
+ This script will process (resize, compress...) photos and videos according to the specified options.
+ For now it only support JPEG photo and MP4 video.
