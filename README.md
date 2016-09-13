@@ -87,7 +87,7 @@ Options:
 
 ### Examples
 
-* If you want to convert all photos or videos in the current directory by using all defined format(s) from the configuration file:
+* If you want to convert all photos and videos in the current directory by using all defined format(s) from the configuration file:
 
 `process-media`
 
