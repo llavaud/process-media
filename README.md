@@ -6,6 +6,25 @@ For now it only support **JPEG** photo and **MP4** video.
 
 ## Installation
 
+### Package
+
+You can add my personal repository to your **`/etc/apt/sources.list`** by adding the following line:
+
+`deb https://llavaud.github.io/process-media/apt xenial universe`
+
+You must also retrieve and install my GPG key:
+
+`wget -O - https://llavaud.github.io/process-media/apt/conf/gpg.key | sudo apt-key add -`
+
+And then install the package:
+
+```
+sudo apt-get update
+sudo apt-get install process-media
+```
+
+### Archive
+
 This script depends on several binary or Perl library, you need to install the following **Debian/Ubuntu** packages:
 
 ```bash
