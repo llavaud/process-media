@@ -6,7 +6,7 @@ For now it only support **JPEG** photo and **MP4** video.
 
 ## Table of content
 * [Installation](#installation)
-  * [Package](#package)
+  * [Package (favourite)](#package)
   * [Archive](#archive)
 * [Configuration](#configuration)
 * [CLI](#cli)
