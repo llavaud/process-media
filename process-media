@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-require 5.014;
+require 5.010;
 
 use Getopt::Long qw/GetOptions/;
 use MIME::Types;
