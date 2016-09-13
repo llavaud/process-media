@@ -1,3 +1,9 @@
+process-media (0.5) unstable; urgency=medium
+
+  * separate modules from main script
+
+ -- Laurent Lavaud <l.lavaud@gmail.com>  Tue, 13 Sep 2016 17:21:58 +0200
+
 process-media (0.4) unstable; urgency=medium
 
   * new release
