@@ -4,7 +4,7 @@ Priority: optional
 Maintainer: Laurent Lavaud <laurentl@unknown>
 Build-Depends: debhelper (>=9)
 Standards-Version: 3.9.6
-Homepage: https://github.com/llavaud/process-media
+Homepage: https://llavaud.github.io/process-media
 Vcs-Git: git@github.com:llavaud/process-media.git
 Vcs-Browser: https://github.com/llavaud/process-media
 
