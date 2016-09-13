@@ -6,7 +6,9 @@ For now it only support **JPEG** photo and **MP4** video.
 
 ## Installation
 
-### Package
+### Package (favourite)
+
+I have setup a Debian/Ubuntu apt repository to distribute this package
 
 You can add my personal repository to your **`/etc/apt/sources.list`** by adding the following line:
 
@@ -25,13 +27,15 @@ sudo apt-get install process-media
 
 ### Archive
 
-This script depends on several binary or Perl library, you need to install the following **Debian/Ubuntu** packages:
+If you dont want to add a new repository on your system you can also retrieve the [latest zip/tar.gz archive](https://github.com/llavaud/process-media/releases/latest).
+
+This script depends on several binary or Perl library, so you need to install the following **Debian/Ubuntu** packages before using it:
 
 ```bash
 sudo apt-get install ffmpeg jpeginfo libimage-exiftool-perl libimage-magick-perl libmime-types-perl libsys-cpu-perl libterm-readkey-perl
 ```
 
-Once the packages are installed, you just need to extract the zip/tar.gz of the [latest archive](https://github.com/llavaud/process-media/releases/latest) and execute the **./process-media** binary
+Once the packages are installed, you just need to extract the archive and execute the **./process-media** binary
 
 ## CLI
 
