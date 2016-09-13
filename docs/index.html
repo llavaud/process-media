@@ -21,7 +21,10 @@ ul { list-style-type: square; }
         <h2>Repository</h2>
         <ul>
             <li>You can add the following repository to your apt source list:
-                <pre>deb https://llavaud.github.io/process-media/apt stable main</pre>
+                <pre>deb https://llavaud.github.io/process-media/apt xenial main</pre>
+            </li>
+            <li>Add the repository GPG key:
+                <pre>wget -O - https://llavaud.github.io/process-media/apt/conf/gpg.key | sudo apt-key add -</pre>
             </li>
         </ul>
     </body>
