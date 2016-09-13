@@ -14,6 +14,7 @@ For now it only support **JPEG** photo and **MP4** video.
 
 ## Installation
 
+<a name="package"/>
 ### Package (favourite)
 
 I have setup a Debian/Ubuntu apt repository to distribute this package
