@@ -20,7 +20,7 @@ local $SIG{'TERM'} = \&sig_handler;
 
 ## VARS
 
-my $config_file = 'process-media.yaml';
+my $config_file = (-f '/etc/process-media.yaml') ? '/etc/process-media.yaml' : 'process-media.yaml';
 my $path;
 my @threads;
 my @objects;
