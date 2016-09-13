@@ -1,11 +1,17 @@
+# * [Installation](#installation)
+## * [Package](#package)
+## * [Archive](#archive)
+
 # process-media
 
 This script will process (resize, compress...) photos and videos according to the specified options.
 
 For now it only support **JPEG** photo and **MP4** video.
 
+<a name="installation"/>
 ## Installation
 
+<a name="package"/>
 ### Package (favourite)
 
 I have setup a Debian/Ubuntu apt repository to distribute this package
@@ -25,6 +31,7 @@ sudo apt-get update
 sudo apt-get install process-media
 ```
 
+<a name="archive"/>
 ### Archive
 
 If you dont want to add a new repository on your system you can also retrieve the [latest zip/tar.gz archive](https://github.com/llavaud/process-media/releases/latest)
