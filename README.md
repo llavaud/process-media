@@ -1,16 +1,16 @@
-## Table of content
-* [Installation](#installation)
-* [Package](#package)
-* [Archive](#archive)
-* [Configuration](#configuration)
-* [CLI](#cli)
-* [Examples](#examples)
-
 # process-media
 
 This script will process (resize, compress...) photos and videos according to the specified options.
 
 For now it only support **JPEG** photo and **MP4** video.
+
+## Table of content
+* [Installation](#installation)
+  * [Package](#package)
+  * [Archive](#archive)
+* [Configuration](#configuration)
+* [CLI](#cli)
+  * [Examples](#examples)
 
 <a name="installation"/>
 ## Installation
