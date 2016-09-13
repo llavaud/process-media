@@ -27,7 +27,7 @@ sudo apt-get install process-media
 
 ### Archive
 
-If you dont want to add a new repository on your system you can also retrieve the [latest zip/tar.gz archive](https://github.com/llavaud/process-media/releases/latest).
+If you dont want to add a new repository on your system you can also retrieve the [latest zip/tar.gz archive](https://github.com/llavaud/process-media/releases/latest)
 
 This script depends on several binary or Perl library, so you need to install the following **Debian/Ubuntu** packages before using it:
 
@@ -35,26 +35,17 @@ This script depends on several binary or Perl library, so you need to install th
 sudo apt-get install ffmpeg jpeginfo libimage-exiftool-perl libimage-magick-perl libmime-types-perl libsys-cpu-perl libterm-readkey-perl
 ```
 
-Once the packages are installed, you just need to extract the archive and execute the **./process-media** binary
-
-## CLI
-
-```
-Usage: ./process-media [options...] <path>
-Options:
--t,--type        {photo,video}	Type of files to process (default: photo,video)
--f,--format      {format1,...}	Format to generate (default: all format defined in config file)
--m,--max_threads <num_threads>	Maximum allowed threads (default: number of cpu(s)/core(s))
--k,--keep_name                  Do not rename file
--v,--verbose                    Verbose output
--o,--overwrite                  Overwrite existing files
--b,--batch                      Run in non-interactive mode, allowing to run in a crontab
--h,--help                       This help text
-```
+Once the packages are installed, you just need to extract the archive
 
 ## Configuration
 
-You must set the desired format in the configuration file **`process-media.yaml`**, here is an example:
+First you need to define the different formats you want in the configuration file, the script will search for a configuration file by respecting the following order:
+
+**`/etc/process-media.yaml`**
+
+**`process-media.yaml`**
+
+Here is a photo format example:
 
 ```
 web_photo:
@@ -70,3 +61,18 @@ web_photo:
 Here we define a photo format named **web_photo**.
 
 The resulting photo will be auto-rotated, resized, compressed and all metadata will be removed except GPS informations.
+
+## CLI
+
+```
+Usage: ./process-media [options...] <path>
+Options:
+-t,--type        {photo,video}	Type of files to process (default: photo,video)
+-f,--format      {format1,...}	Format to generate (default: all format defined in config file)
+-m,--max_threads <num_threads>	Maximum allowed threads (default: number of cpu(s)/core(s))
+-k,--keep_name                  Do not rename file
+-v,--verbose                    Verbose output
+-o,--overwrite                  Overwrite existing files
+-b,--batch                      Run in non-interactive mode, allowing to run in a crontab
+-h,--help                       This help text
+```
