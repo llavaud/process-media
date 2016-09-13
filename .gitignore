@@ -1,0 +1,5 @@
+debian/debhelper-build-stamp
+debian/files
+debian/process-media.debhelper.log
+debian/process-media.substvars
+debian/process-media/
