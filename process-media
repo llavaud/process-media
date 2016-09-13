@@ -94,8 +94,8 @@ sleep 0.05 while $queue_done->pending() < scalar @objects;
 $queue_done->end;
 
 # search duplicate name
-'Photo'->search_duplicate(@objects);
-'Video'->search_duplicate(@objects);
+'Llavaud::Process::Media::Photo'->search_duplicate(@objects);
+'Llavaud::Process::Media::Video'->search_duplicate(@objects);
 
 $run = 2;
 $queue_todo->enqueue($_) for @objects;
@@ -346,11 +346,11 @@ sub get_objects {
         my $type = $mt->mimeTypeOf($_);
         if (defined $type and $type eq 'image/jpeg') {
             next if $OPTIONS{'type'} !~ /photo/;
-            $obj = Photo->new();
+            $obj = Llavaud::Process::Media::Photo->new();
         }
         elsif (defined $type and $type eq 'video/mp4') {
             next if $OPTIONS{'type'} !~ /video/;
-            $obj = Video->new();
+            $obj = Llavaud::Process::Media::Video->new();
         }
         if (defined $obj) {
             $obj->init($_);
