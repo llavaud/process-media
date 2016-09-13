@@ -3,6 +3,6 @@ Suite: stable
 Codename: xenial
 Version: 16.04
 Architectures: amd64
-Components: main
+Components: universe
 Description: personal repository
 SignWith: FDAB5667
