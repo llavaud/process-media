@@ -1,9 +1,9 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: process-media
-Source: <url://example.com>
+Source: <https://github.com/llavaud/process-media>
 
 Files: *
-Copyright: 2016 Laurent Lavaud <laurentl@unknown>
+Copyright: 2016 Laurent Lavaud <l.lavaud@gmail.com>
 License: GPL-3.0+
 
 License: GPL-3.0+

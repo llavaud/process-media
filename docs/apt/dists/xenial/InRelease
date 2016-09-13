@@ -5,36 +5,36 @@ Origin: Laurent Lavaud
 Suite: stable
 Codename: xenial
 Version: 16.04
-Date: Tue, 13 Sep 2016 09:24:25 UTC
+Date: Tue, 13 Sep 2016 12:55:25 UTC
 Architectures: amd64
 Components: universe
 Description: personal repository
 MD5Sum:
- 5d309791a47a73edb934fa45330ad687 662 universe/binary-amd64/Packages
- 17c0454bef87e8962e30348f28c16e0c 446 universe/binary-amd64/Packages.gz
+ 7c83aae860b25bde28cbd5c2d7f2d7fa 798 universe/binary-amd64/Packages
+ 37824710ce24a04f50b164fe282dfbde 523 universe/binary-amd64/Packages.gz
  0d8675307b336ccd63c2d4733bcf0de8 127 universe/binary-amd64/Release
 SHA1:
- 035c55c924feccdea62caeee2bfd160c30a8fd18 662 universe/binary-amd64/Packages
- 1c06672ca6373c518a2e64d8d6a933565a91ecd4 446 universe/binary-amd64/Packages.gz
+ 059bed2da0850a42cee40262ac69c3741ab70afa 798 universe/binary-amd64/Packages
+ 71db23ff73c0a5d804781467498086d6d199851d 523 universe/binary-amd64/Packages.gz
  4805e1e884a67c42d546a916c78b63bc09a63193 127 universe/binary-amd64/Release
 SHA256:
- a908c51b371aed97a7c2b34f70d62b6f424b6dcd6fa71b3f1df708288d63d877 662 universe/binary-amd64/Packages
- 474462ece1e99b69286b9d93e4daf627e8e688aef30d3b0acc8fb1bb7fe756d9 446 universe/binary-amd64/Packages.gz
+ b100d683717751a2fe023ca6b5eaa677ed697cf4f1941de6aee78a239529dc75 798 universe/binary-amd64/Packages
+ a0199b7f811459b51ed2680ef51b3306612b849ea6957e1a8265b595b2f3e21c 523 universe/binary-amd64/Packages.gz
  4b1031b140264875a8b6ea3ee51ef3350fe1900bc3a12c12e6dc8646fcd2c96e 127 universe/binary-amd64/Release
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v2
 
-iQIcBAEBCAAGBQJX18XJAAoJEF0Wt+X9q1Zn2G4P/0GrYnJ7xvGDWKc4LhSmbTeu
-WpIaxmLqFf5ChUNoUbdqInA935HI5A0Di5EfJ5OcbYCUuqqY4kt97VSw77lXfLiK
-/qZWS0qLkGijIdd9gRdcMLovoMWv54rq7raQtEE4Qr0ycPgq6PI/FSJFmlTYdXoR
-KMaG6f9wFOyMvCsAVaLoyA+l1hPf8JwmIOYrJJccDkDqquMYu+Sa9IKDMl1ziTXk
-0gvdVHPfzRFgRkJD2nAFtA3G7NBAFD9qwq1Dh8WLhT1xhaqLH1ZTikiNodKb3RmT
-PTPbbF1FL+6Rb7e/LkCLluKw62c4S86sir/K4IlJgAou47sdggYy6qG1PVVgxbWQ
-ioJMNbDvHa4YB9tBxUUmQT/oD1TmeTVtU4BxBFydgArcN1h5W6+pj3hU0NihFHWf
-iZnPrWMNYmnQBFOnZEi56D8IW3f5QZwrlVz9riB/k2C6MV3ZsTf8HK1vUR7Jvxqu
-1Dc9pmPc27Fl1CrHfFR6MGkWMJ7aDLyFmRUet+yynrs2t6gJhwsAV48Zj7AX4KdG
-dsG8AZlawZfSq6vzIOnLBeFuGp4JAx5lDZgR6HpFCf/oXC70KgOZ87ssd/Klh5px
-7ZW1lX4ODyVw+f9jwIglkdHopBziKDOi0fCbI37tXXVaux72AFQcMIMmkJC6Mlcv
-1fXzUaWim9lyWX7jnYIH
-=s9e4
+iQIcBAEBCAAGBQJX1/c9AAoJEF0Wt+X9q1Zn9g8P/0XIBRbZeWXNQklP1asH0X5O
+spML76r+QL5yVmf7Y2HX92a5K4cskfWaLbI2FodMAAWbAlcqxLJpJQ0N5ipLhLcJ
+s/SOYt97/UFfS+IfJ4stkWckE5gNNs+ntHrh5rCww/PzkYAkgpE9QWTHUyPzuFpz
+z9nWgg44Ctlrw30q243aSUGXtrf8MfiXzAIAY1kLYO+y6uaEd5upUc9Pj5MUkwiw
+jtV3dHrSiMCkj/2gE8/mIeDgb/kpwVd6mNvi2bV+44w5yVwCKVBLnwjdeoqkai/Z
+atZLtFCYjEAq+h6Z0pNLR1bYbOnNyRSwYnI4hyxJpwWLR1nn5MiyDx3xeiAb3CyY
+yv//PHm3rTS1EsauklURToqS2nWCZuFefEMRBT4nFbaDePHCnDvoIe6emUCKNKc5
+IR0VleSRD87Q5WrcKFB2sQRka43kDHvRxTUBBYJdQGl07gD1jiTUHVm/3kEh+Vm8
+2SX8sr9L9duOvIZSnvIGLXrM2rWQqKMxGIk0k/Ih+vP6QO/8+bfy1hZSSUhg/kiJ
+n86Yj2zdkwhgS74Rsw5gOzGL08MS+5lRauQXmg3YLkGD/ZRl4+4dPrbdjsjfaDWJ
+SOcGqxptMFAJrh9kHU4PdNOHZIT0OGp7ODA6qyMLftL0MzmgQAfAsXz2j4DNj3gL
+cEtgaNido1JX9PJKyY2t
+=xTsc
 -----END PGP SIGNATURE-----

@@ -1,7 +1,7 @@
 Source: process-media
-Section: unknown
+Section: graphics
 Priority: optional
-Maintainer: Laurent Lavaud <laurentl@unknown>
+Maintainer: Laurent Lavaud <l.lavaud@gmail.com>
 Build-Depends: debhelper (>=9)
 Standards-Version: 3.9.6
 Homepage: https://llavaud.github.io/process-media
@@ -10,7 +10,7 @@ Vcs-Browser: https://github.com/llavaud/process-media
 
 Package: process-media
 Architecture: all
-Depends: ${misc:Depends}
+Depends: perl (>=5.14), ffmpeg, jpeginfo, libimage-exiftool-perl, libimage-magick-perl, libmime-types-perl, libsys-cpu-perl, libterm-readkey-perl
 Description: A photos and videos processing script
  This script will process (resize, compress...) photos and videos according to the specified options.
  For now it only support JPEG photo and MP4 video.

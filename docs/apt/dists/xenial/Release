@@ -2,19 +2,19 @@ Origin: Laurent Lavaud
 Suite: stable
 Codename: xenial
 Version: 16.04
-Date: Tue, 13 Sep 2016 09:24:25 UTC
+Date: Tue, 13 Sep 2016 12:55:25 UTC
 Architectures: amd64
 Components: universe
 Description: personal repository
 MD5Sum:
- 5d309791a47a73edb934fa45330ad687 662 universe/binary-amd64/Packages
- 17c0454bef87e8962e30348f28c16e0c 446 universe/binary-amd64/Packages.gz
+ 7c83aae860b25bde28cbd5c2d7f2d7fa 798 universe/binary-amd64/Packages
+ 37824710ce24a04f50b164fe282dfbde 523 universe/binary-amd64/Packages.gz
  0d8675307b336ccd63c2d4733bcf0de8 127 universe/binary-amd64/Release
 SHA1:
- 035c55c924feccdea62caeee2bfd160c30a8fd18 662 universe/binary-amd64/Packages
- 1c06672ca6373c518a2e64d8d6a933565a91ecd4 446 universe/binary-amd64/Packages.gz
+ 059bed2da0850a42cee40262ac69c3741ab70afa 798 universe/binary-amd64/Packages
+ 71db23ff73c0a5d804781467498086d6d199851d 523 universe/binary-amd64/Packages.gz
  4805e1e884a67c42d546a916c78b63bc09a63193 127 universe/binary-amd64/Release
 SHA256:
- a908c51b371aed97a7c2b34f70d62b6f424b6dcd6fa71b3f1df708288d63d877 662 universe/binary-amd64/Packages
- 474462ece1e99b69286b9d93e4daf627e8e688aef30d3b0acc8fb1bb7fe756d9 446 universe/binary-amd64/Packages.gz
+ b100d683717751a2fe023ca6b5eaa677ed697cf4f1941de6aee78a239529dc75 798 universe/binary-amd64/Packages
+ a0199b7f811459b51ed2680ef51b3306612b849ea6957e1a8265b595b2f3e21c 523 universe/binary-amd64/Packages.gz
  4b1031b140264875a8b6ea3ee51ef3350fe1900bc3a12c12e6dc8646fcd2c96e 127 universe/binary-amd64/Release
