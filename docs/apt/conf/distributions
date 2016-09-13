@@ -1,9 +1,8 @@
 Origin: Laurent Lavaud
-Label: Label de votre société (ou autre)
 Suite: stable
 Codename: xenial
 Version: 16.04
 Architectures: amd64
 Components: main
 Description: personal repository
-SignWith: 2DEAEB01
+SignWith: FDAB5667

@@ -2,6 +2,5 @@ Archive: stable
 Version: 16.04
 Component: main
 Origin: Laurent Lavaud
-Label: Label de votre société (ou autre)
 Architecture: amd64
 Description: personal repository
