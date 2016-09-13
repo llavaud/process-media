@@ -4,7 +4,7 @@ This script will process (resize, compress...) photos and videos according to th
 
 For now it only support **JPEG** photo and **MP4** video.
 
-## Table of content
+## Table of contents
 * [Installation](#installation)
   * [Package (favourite)](#package)
   * [Archive](#archive)
