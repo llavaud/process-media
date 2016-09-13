@@ -5,36 +5,36 @@ Origin: Laurent Lavaud
 Suite: stable
 Codename: xenial
 Version: 16.04
-Date: Tue, 13 Sep 2016 08:30:50 UTC
+Date: Tue, 13 Sep 2016 09:04:25 UTC
 Architectures: amd64
 Components: main
 Description: personal repository
 MD5Sum:
- ab03e04aeb6a0564bc7a83c858cbe07d 645 main/binary-amd64/Packages
- 22e505e031acde062f847ef16c260e2b 438 main/binary-amd64/Packages.gz
+ cb037bea522423326bc1e48e3431f2dc 658 main/binary-amd64/Packages
+ 066ba48b92741fada7c2b6a234dfa430 444 main/binary-amd64/Packages.gz
  7b91d4d4569d29974e23ed72aade1abc 123 main/binary-amd64/Release
 SHA1:
- c6e057b756e207ee5e39a523f0063edd8089742d 645 main/binary-amd64/Packages
- 6412746419617d909ee37eb7963eed0c8038721e 438 main/binary-amd64/Packages.gz
+ 39310b0989302756b55de602f59b9ee33b506f65 658 main/binary-amd64/Packages
+ cc1ab6b722d052eec029e60e5d0a4fb70e976b4a 444 main/binary-amd64/Packages.gz
  8eb0b1c6c92bd6bf02aa42164e10db63420443c6 123 main/binary-amd64/Release
 SHA256:
- a774325663350daf6c26d7495c00256acfa3d02b8dabdcd9e9cfc875737c7020 645 main/binary-amd64/Packages
- 5e426f454a3652338c27a5d97c631d008877f46c3aad9c3a9828d33970f28779 438 main/binary-amd64/Packages.gz
+ ec779d5a4ddc18415807ffdb8f0ecdfa31f71807172469c90a5954ce5848b2e6 658 main/binary-amd64/Packages
+ 86058064046bd43abc0fcd0c1671c4e77ff2b0eff732fcee5bbfdfea7f318d7f 444 main/binary-amd64/Packages.gz
  1ba5f347bdc1ce57aa68492487634c97c07da602e5058b63a7c281ce04108d9a 123 main/binary-amd64/Release
 -----BEGIN PGP SIGNATURE-----
 Version: GnuPG v2
 
-iQIcBAEBCAAGBQJX17k6AAoJEF0Wt+X9q1ZnvO8P/jpUpnfCghBlceaqkff9otiJ
-V6b4ffKsLsGngT/Sz9ooVu1ZIm2iuTPnvr2gv3NiKdakCptJ4cnyNqHEiSs0u/s6
-87+AcsTgmhr9v4ODbpy+YK1/A3AJcFnUhmT7FiMvxAt0KNrfxkCF4/PgYMkMr4z+
-qZWXHGcKh8TTk3a2CKSXQAP3vlxifNvWYw8hqI/NOAoz2mEfgJeVwq7F0PPsBxhV
-/YfhX5sIIo+q5BEj9zJKkVsIr4n3Qm+u+AnlxE+NVz9HCZMCKQ3itqBgc0d3FVtZ
-BLwNG4Q/9YOzLbwO+RXnH03XMQPvsGODGToJxa0w+Ox2x6RU5RxM3rno1xkfzmtJ
-QY0GDv58+Fj6/RISjuYtwzg2Fl1cLoAfmhRJ7SzOJHoDHsKM/PFB6BPKiUoljNm0
-n1I71cXubDyDWjrG5hks0aVxYE7JXe6Ns72GB9Cqcc12k7NL8/zV8oWZxXwKFBl2
-kvTO/ASLZNGjZzdJT8RHb/FBUIXQJNwdAtMi9CuRvRic//QnarvvyMquY2mYxbAt
-tX2kpxrsEXNztp/G9OkP/we1r3OFHNV1CzQ8LHlrjcBP+XcE4NiVDjlQgyp018iC
-0cOZp2dVSmRUNvfd3KmmCOE3iQ+1MlOM0fAdfwJv/LloYNMPFx9S6SmaAbnHdFQB
-9BFxcyU5oSoOvbf5O9yg
-=iwao
+iQIcBAEBCAAGBQJX18EZAAoJEF0Wt+X9q1ZntwgP/RG1TishP3dgrcHJE77svDqw
+6p5dFhHpVKJ3+VR4FXys2DTaakGpSsuK+8NL02/B4Pt/hfG98mUredo+1jyrLpkM
+fKwuH6v59tyTgi4f3A2gskz1MZNFjqcXTEThpZ9dOLXZhNqSaEtY19uwAkxwo9N2
+8duVdQ2IhXBbW3L7UEhLGJi8Jvby3m8wLbd7wr9Nba/spwEfAfFm9DxwNFQ0qwnb
+4CkBh0OPNmbkV4LRWP7gKB8/v4IgDhTIEb/io5m18stwAOuf5L5dFaS0qUw1Oz9Z
+0Q2DFW9u2OumrS7TFs931t0Y83uTBV8qLF71kCvD8CLeiMlBNd5IIk8T+RAlKjhJ
+hhjayfMmDp1p7nxhu3DahK3Tvkg2ZJYAK4gMRbvbpRbD5QV7ukHQFksaeE2XrOCv
+moEm8GwGUCrT5HUvtP420UcnGcV1nxKOR1d3MZc0310E0Gi5HmPQY4gM3OEmRkIA
+nSKn5i+MUBJtaawn0x8QHQ2Gbakhg77SKbgSNWzuyTR15LkyFjWkiEBY37nQrQ4h
+OzEWqZHttTox2dVRUoQXwMoPr1DZ2YGpF6nax13DYc3pdHTm8Xdk4JmLfdIqa6Ht
+YzLb/yvK3NRjrjs9U5weBOem5T5M+zjQIlHasbDBTs1jAjTXVarrY/3DXoczlNBc
+a73xwsSDsqXlMRcmNQuQ
+=rwBq
 -----END PGP SIGNATURE-----

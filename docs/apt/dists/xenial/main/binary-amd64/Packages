@@ -1,16 +1,16 @@
 Package: process-media
-Version: 0.3
+Version: 0.3ubuntu1
 Architecture: all
 Maintainer: Laurent Lavaud <laurentl@unknown>
 Installed-Size: 44
-Homepage: https://github.com/llavaud/process-media
+Homepage: https://llavaud.github.io/process-media
 Priority: optional
 Section: unknown
-Filename: pool/main/p/process-media/process-media_0.3_all.deb
-Size: 7496
-SHA256: 8236936fc21846df2dfd1dae04abdcafe509af936f20fd2d4f9cf0bc8cd085f3
-SHA1: f15468a6273550aabce96195417a5d8076bed629
-MD5sum: 36d3f687d6d60812c07a4a47351ba62f
+Filename: pool/main/p/process-media/process-media_0.3ubuntu1_all.deb
+Size: 7602
+SHA256: 0c5b9d110de45d8b3a788254e6cb83a584c2d5d31c4b082fc2826bf622be57c6
+SHA1: bd42c14cdbd1926f88bfcf1797842c3cb02826a5
+MD5sum: 130537fe97d6dd46a4eecb7f0a61ccc2
 Description: A photos and videos processing script
  This script will process (resize, compress...) photos and videos according to the specified options.
  For now it only support JPEG photo and MP4 video.

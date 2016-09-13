@@ -2,19 +2,19 @@ Origin: Laurent Lavaud
 Suite: stable
 Codename: xenial
 Version: 16.04
-Date: Tue, 13 Sep 2016 08:30:50 UTC
+Date: Tue, 13 Sep 2016 09:04:25 UTC
 Architectures: amd64
 Components: main
 Description: personal repository
 MD5Sum:
- ab03e04aeb6a0564bc7a83c858cbe07d 645 main/binary-amd64/Packages
- 22e505e031acde062f847ef16c260e2b 438 main/binary-amd64/Packages.gz
+ cb037bea522423326bc1e48e3431f2dc 658 main/binary-amd64/Packages
+ 066ba48b92741fada7c2b6a234dfa430 444 main/binary-amd64/Packages.gz
  7b91d4d4569d29974e23ed72aade1abc 123 main/binary-amd64/Release
 SHA1:
- c6e057b756e207ee5e39a523f0063edd8089742d 645 main/binary-amd64/Packages
- 6412746419617d909ee37eb7963eed0c8038721e 438 main/binary-amd64/Packages.gz
+ 39310b0989302756b55de602f59b9ee33b506f65 658 main/binary-amd64/Packages
+ cc1ab6b722d052eec029e60e5d0a4fb70e976b4a 444 main/binary-amd64/Packages.gz
  8eb0b1c6c92bd6bf02aa42164e10db63420443c6 123 main/binary-amd64/Release
 SHA256:
- a774325663350daf6c26d7495c00256acfa3d02b8dabdcd9e9cfc875737c7020 645 main/binary-amd64/Packages
- 5e426f454a3652338c27a5d97c631d008877f46c3aad9c3a9828d33970f28779 438 main/binary-amd64/Packages.gz
+ ec779d5a4ddc18415807ffdb8f0ecdfa31f71807172469c90a5954ce5848b2e6 658 main/binary-amd64/Packages
+ 86058064046bd43abc0fcd0c1671c4e77ff2b0eff732fcee5bbfdfea7f318d7f 444 main/binary-amd64/Packages.gz
  1ba5f347bdc1ce57aa68492487634c97c07da602e5058b63a7c281ce04108d9a 123 main/binary-amd64/Release

@@ -1,3 +1,9 @@
+process-media (0.3ubuntu1) xenial; urgency=medium
+
+  * use /etc/process-media.yaml as default configuration file
+
+ -- Laurent Lavaud <laurentl@laurentl-laptop>  Tue, 13 Sep 2016 11:02:14 +0200
+
 process-media (0.3) unstable; urgency=medium
 
   * New stable release
