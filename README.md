@@ -17,7 +17,7 @@ For now it only support **JPEG** photo and **MP4** video.
 <a name="package"/>
 ### Package (favourite)
 
-I have setup a Debian/Ubuntu apt repository to distribute this package
+I have setup a **Debian/Ubuntu** apt repository to distribute this package
 
 You can add my personal repository to your **`/etc/apt/sources.list`** by adding the following line:
 
