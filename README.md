@@ -75,10 +75,10 @@ The resulting photo will be auto-rotated, resized, compressed and all metadata w
 ```
 Usage: ./process-media [options...] <path>
 Options:
--t,--type        {photo,video}	Type of files to process (default: photo,video)
--f,--format      {format1,...}	Format to generate (default: all format defined in config file)
--c,--config      <config_file> Config file to load (default: search process-media.yaml in /etc or local)
--m,--max_threads <num_threads>	Maximum allowed threads (default: number of cpu(s)/core(s))
+-t,--type        {photo,video}  Type of files to process (default: photo,video)
+-f,--format      {format1,...}  Format to generate (default: all format defined in config file)
+-c,--config      <config_file>  Config file to load (default: search process-media.yaml in /etc or local)
+-m,--max_threads <num_threads>  Maximum allowed threads (default: number of cpu(s)/core(s))
 -k,--keep_name                  Do not rename file
 -v,--verbose                    Verbose output
 -o,--overwrite                  Overwrite existing files
