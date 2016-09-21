@@ -1,3 +1,10 @@
+process-media (0.7) stable; urgency=medium
+
+  * change the rotate format option to allow forced rotation
+  * add dependency to libyaml-tiny-perl package
+
+ -- Laurent Lavaud <l.lavaud@gmail.com>  Wed, 21 Sep 2016 14:13:46 +0200
+
 process-media (0.6) unstable; urgency=medium
 
   * correcting a bug with path of modules 
