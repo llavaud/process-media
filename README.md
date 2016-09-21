@@ -41,7 +41,7 @@ If you dont want to add a new repository on your system you can also retrieve th
 This script depends on several binary or Perl library, so you need to install the following **Debian/Ubuntu** packages before using it:
 
 ```bash
-sudo apt-get install ffmpeg jpeginfo libimage-exiftool-perl libimage-magick-perl libmime-types-perl libsys-cpu-perl libterm-readkey-perl
+sudo apt-get install ffmpeg jpeginfo libimage-exiftool-perl libimage-magick-perl libmime-types-perl libsys-cpu-perl libterm-readkey-perl libyaml-tiny-perl
 ```
 
 Once the packages are installed, you just need to extract the archive
