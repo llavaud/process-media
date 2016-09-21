@@ -151,12 +151,19 @@ sub process {
 			carp "[$obj->{'final'}->{$_}->{'path'}] Failed to read, $err";
 			return 0;
 		}
-		# physically rotate image according to the exif orientation tag
-		if (defined $main::OPTIONS{'format'}{$_}{'rotate'} and $main::OPTIONS{'format'}{$_}{'rotate'} eq 'true' and
-			my $err = $image->AutoOrient()) {
-			carp "[$obj->{'final'}->{$_}->{'path'}] Failed to auto-orient, $err";
-			return 0;
-		}
+        if (defined $main::OPTIONS{'format'}{$_}{'rotate'}) {
+            my $err;
+            if ($main::OPTIONS{'format'}{$_}{'rotate'} eq 'auto') {
+                $err = $image->AutoOrient();
+            } else {
+                $err = $image->Rotate($main::OPTIONS{'format'}{$_}{'rotate'});
+                $err = $image->Set(orientation => 'top-left');
+            }
+            if ($err) {
+                carp "[$obj->{'final'}->{$_}->{'path'}] Failed to auto-orient, $err";
+                return 0;
+            }
+        }
 		# resize image to get the larger side to 1920 (only if it is larger than 1920) and preserve aspect ratio
 		if (defined $main::OPTIONS{'format'}{$_}{'resize'} and
 			my $err = $image->Resize("$main::OPTIONS{'format'}{$_}{'resize'}x$main::OPTIONS{'format'}{$_}{'resize'}>")){

@@ -25,7 +25,7 @@ local $SIG{'TERM'} = \&sig_handler;
 
 ## VARS
 
-my $config_file = (-f '/etc/process-media.yaml') ? '/etc/process-media.yaml' : 'process-media.yaml';
+my $config_file;
 my $path;
 my @threads;
 my @objects;
@@ -34,14 +34,11 @@ our %OPTIONS;
 
 ## MAIN
 
-my $conf = YAML::Tiny->read($config_file);
-
-&check_conf();
-
 GetOptions(
     $opts,
     'type=s',
     'format=s',
+    'config=s',
     'max_threads=i',
     'batch',
     'keep_name',
@@ -49,6 +46,17 @@ GetOptions(
     'overwrite',
     'help',
 ) or die "Error in command line arguments\n";
+
+if (defined $opts->{'config'}) {
+    die "Config file \'$opts->{'config'}\' not found\n" unless -f $opts->{'config'};
+    $config_file = $opts->{'config'};
+} else {
+    $config_file = (-f '/etc/process-media.yaml') ? '/etc/process-media.yaml' : 'process-media.yaml';
+}
+
+my $conf = YAML::Tiny->read($config_file);
+
+&check_conf();
 
 &check_params();
 
@@ -250,7 +258,7 @@ sub check_conf {
 
             # rotate
             die "Bad option '$_' for format '$fname' in config file\n"
-                if $_ eq 'rotate' and $conf->[1]->{$fname}->{$_} !~ /^(?:true|false)$/;
+                if $_ eq 'rotate' and $conf->[1]->{$fname}->{$_} !~ /^(?:auto|90|180|270)$/;
 
             # reencode
             die "Bad option '$_' for format '$fname' in config file\n"
@@ -367,6 +375,7 @@ Usage: $0 [options...] <path>
 Options:
 -t,--type\t\t{photo,video}\tType of files to process (default: photo,video)
 -f,--format\t\t{format1,...}\tFormat to generate (default: all format defined in config file)
+-c,--config\t\t<config_file>\tConfig file to load (default: search process-media.yaml in /etc or local)
 -m,--max_threads\t<num_threads>\tMaximum allowed threads (default: number of cpu(s)/core(s))
 -k,--keep_name\t\t\t\tDo not rename file
 -v,--verbose\t\t\t\tVerbose output

@@ -19,8 +19,11 @@ overwrite: false
 
 archive_photo:
   type: 'photo'
-  # auto-rotate photo according to Exif:Orientation metadata
-  rotate: true
+
+  # if set to 'auto', do an auto-rotate according to metadata
+  # otherwise rotate to specified value (possible values are 90, 180 or 270 in clockwise)
+  rotate: 'auto'
+
   # specify the directory where files will be written
   # output_dir is a relative path from source file directory
   # if no output_dir is specified, default is to use format name
@@ -28,36 +31,46 @@ archive_photo:
 
 web_photo:
   type: 'photo'
-  rotate: true
+  rotate: 'auto'
+
   # resize photo in order to get the larger side set to this value
   resize: '1920'
+
   # compress the jpeg photo according to this value
   # a low value result in a better compression but a lower quality image
   compress: 90
+
   # if set to true, all metadata will be removed
   # if set to a list of value, all metadata will be removed except the one(s) listed
   # for now only support the tag "orientation" and "gps"
   strip:
       - 'orientation'
 #     - 'gps'
+
   output_dir: 'web'
 
 archive_video:
   type: 'video'
+
   # specify that we want to reencode the video in order to reduce the file size
   reencode: true
+
   # use the x264 video codec (it is the default)
   # for now only support the "x264" and "x265" video codec
   codec: 'x264'
+
+  rotate: 'auto'
   output_dir: 'archive/videos'
 
 web_video:
   type: 'video'
   reencode: true
   codec: 'x264'
+  rotate: 'auto'
   resize: '1024'
   strip: true
+
   # we want to generate a thumbnail image
   thumbnail: true
-  output_dir: 'web/videos'
 
+  output_dir: 'web/videos'
