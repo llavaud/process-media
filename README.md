@@ -58,7 +58,7 @@ Here is a photo format example:
 ```
 web_photo:
   type: 'photo'
-  rotate: true
+  rotate: 'auto'
   resize: '1920'
   compress: 90
   strip:
