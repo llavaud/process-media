@@ -1,8 +1,5 @@
-Origin: Laurent Lavaud
-Suite: stable
 Codename: xenial
-Version: 16.04
-Architectures: amd64
+Architectures: i386 amd64
 Components: universe
-Description: personal repository
+Description: Apt repository for project process-media
 SignWith: FDAB5667
