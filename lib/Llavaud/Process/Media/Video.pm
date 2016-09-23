@@ -166,7 +166,7 @@ sub process {
         }
 
         # get original audio codec
-        my $caudio = `ffprobe -show_streams -select_streams a $obj->{'original'}->{'path'} 2>&1 | grep codec_name | sed 's/^codec_name=//'`;
+        chomp (my $caudio = `ffprobe -show_streams -select_streams a $obj->{'original'}->{'path'} 2>&1 | grep codec_name | sed 's/^codec_name=//'`);
         if (not defined $caudio) {
             carp "[$obj->{'original'}->{'path'}] Failed to get audio codec";
             return 0;
