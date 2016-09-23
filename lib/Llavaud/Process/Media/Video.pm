@@ -148,7 +148,7 @@ sub process {
 
 		print "[$obj->{'final'}->{$_}->{'path'}] Processing...\n" if $main::OPTIONS{'verbose'} eq 'true';
 
-		my $cmd = "ffmpeg -nostdin -hide_banner -y -flags +global_header";
+        my $cmd = "ffmpeg -nostdin -hide_banner -y";
 
         $cmd .= ($main::OPTIONS{'verbose'} eq 'true') ? " -loglevel warning" : " -loglevel error";
 
@@ -166,7 +166,7 @@ sub process {
         }
 
         # get original audio codec
-        my $caudio = `ffprobe -show_streams -select_streams a $obj->{'original'}->{'path'} 2>&1 | grep codec_name | sed 's/^codec_name=//'`;
+        chomp (my $caudio = `ffprobe -show_streams -select_streams a $obj->{'original'}->{'path'} 2>&1 | grep codec_name | sed 's/^codec_name=//'`);
         if (not defined $caudio) {
             carp "[$obj->{'original'}->{'path'}] Failed to get audio codec";
             return 0;
@@ -178,6 +178,10 @@ sub process {
         } else {
             $cmd .= " -codec:a aac -b:a 160k -strict experimental";
         }
+
+        # Keep all metadata
+        #$cmd .= " -map_metadata 0 -map_metadata:s:v 0:s:v -map_metadata:s:a 0:s:a";
+        $cmd .= " -map_metadata 0";
 
         # filters
         if (defined $main::OPTIONS{'format'}{$_}{'resize'} or defined $main::OPTIONS{'format'}{$_}{'rotate'}) {
@@ -206,7 +210,10 @@ sub process {
             }
         }
 
-		$cmd .= " $obj->{'final'}->{$_}->{'path'}";
+        $cmd .= " -flags +global_header";
+        $cmd .= " $obj->{'final'}->{$_}->{'path'}";
+
+        print "$cmd\n";
 
 		&execute($obj->{'final'}->{$_}->{'path'}, 'Failed to encode', $cmd);
 	}
