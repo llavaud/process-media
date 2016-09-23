@@ -148,28 +148,51 @@ sub process {
 
 		print "[$obj->{'final'}->{$_}->{'path'}] Processing...\n" if $main::OPTIONS{'verbose'} eq 'true';
 
-		my $cmd = "ffmpeg -nostdin -hide_banner -y -loglevel warning";
+		my $cmd = "ffmpeg -nostdin -hide_banner -y -flags +global_header";
+
+        if ($main::OPTIONS{'verbose'} eq 'true') {
+            $cmd .= " -loglevel warning";
+        } else {
+            $cmd .= " -loglevel error";
+        }
 
         if (not defined $main::OPTIONS{'format'}{$_}{'rotate'} or $main::OPTIONS{'format'}{$_}{'rotate'} =~ '^(?:90|180|270)$') {
             $cmd .= " -noautorotate";
         }
 
-        $cmd .= " -i $obj->{'original'}->{'path'} -codec:a copy -flags +global_header";
+        $cmd .= " -i $obj->{'original'}->{'path'}";
 
+        # video codec
 		if (defined $main::OPTIONS{'format'}{$_}{'codec'} and $main::OPTIONS{'format'}{$_}{'codec'} eq 'x265') {
 			$cmd .= " -codec:v libx265 -x265-params crf=23:log-level=error";
-		}
+		} else {
+            $cmd .= " -codec:v libx264";
+        }
+
+        my $caudio = `ffprobe -show_streams -select_streams a $obj->{'original'}->{'path'} 2>&1 | grep codec_name | sed 's/^codec_name=//'`;
+
+        if (not defined $caudio) {
+            carp "[$obj->{'original'}->{'path'}] Failed to get audio codec";
+            return 0;
+        }
+
+        # audio codec
+        if ($caudio eq 'aac') {
+            $cmd .= " -codec:a copy";
+        } else {
+            $cmd .= " -codec:a aac -b:a 160k -strict experimental";
+        }
 
         # filters
         if (defined $main::OPTIONS{'format'}{$_}{'resize'} or defined $main::OPTIONS{'format'}{$_}{'rotate'}) {
 
             my @vf;
-            if ($main::OPTIONS{'format'}{$_}{'rotate'} =~ '^(?:90|180|270)$') {
+            if (defined $main::OPTIONS{'format'}{$_}{'rotate'} and $main::OPTIONS{'format'}{$_}{'rotate'} =~ '^(?:90|180|270)$') {
                 push @vf, "transpose=1" if $main::OPTIONS{'format'}{$_}{'rotate'} == 90;
                 push @vf, "transpose=1,transpose=1" if $main::OPTIONS{'format'}{$_}{'rotate'} == 180;
                 push @vf, "transpose=1,transpose=1,transpose=1" if $main::OPTIONS{'format'}{$_}{'rotate'} == 270;
             }
-            push @vf, "scale='if(gt(iw,ih),$main::OPTIONS{'format'}{$_}{'resize'},trunc(oh*a/2)*2)':'if(gt(iw,ih),trunc(ow/a/2)*2,$main::OPTIONS{'format'}{$_}{'resize'})'" if defined $main::OPTIONS{'format'}{$_}{'resize'};
+            push @vf, "scale=iw*min(1\\,min($main::OPTIONS{'format'}{$_}{'resize'}/iw\\,$main::OPTIONS{'format'}{$_}{'resize'}/ih)):-1" if defined $main::OPTIONS{'format'}{$_}{'resize'};
 
             if (@vf) {
                 $cmd .= " -vf \"";
@@ -178,6 +201,7 @@ sub process {
             }
         }
 
+        # if forced rotation, remove rotate metadata
         if (defined $main::OPTIONS{'format'}{$_}{'rotate'} and $main::OPTIONS{'format'}{$_}{'rotate'} =~ '^(?:90|180|270)$') {
             $cmd .= " -metadata:s:v rotate=0";
         }
