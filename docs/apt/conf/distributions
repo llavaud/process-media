@@ -1,5 +1,5 @@
-Codename: xenial
+Codename: stable
 Architectures: i386 amd64
-Components: universe
+Components: main
 Description: Apt repository for project process-media
 SignWith: FDAB5667

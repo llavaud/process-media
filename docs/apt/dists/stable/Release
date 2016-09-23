@@ -1,0 +1,26 @@
+Codename: stable
+Date: Fri, 23 Sep 2016 10:19:05 UTC
+Architectures: i386 amd64
+Components: main
+Description: Apt repository for project process-media
+MD5Sum:
+ a2d775fda2e535f32c278bf156c686ef 762 main/binary-i386/Packages
+ e0f44728fba9ec568c6cdbef2cf932aa 500 main/binary-i386/Packages.gz
+ 439d053e867b44ac2f3cb7bda4492172 89 main/binary-i386/Release
+ a2d775fda2e535f32c278bf156c686ef 762 main/binary-amd64/Packages
+ e0f44728fba9ec568c6cdbef2cf932aa 500 main/binary-amd64/Packages.gz
+ e12fb048caf22292f3a497b36e0b9462 90 main/binary-amd64/Release
+SHA1:
+ d32807a31457ab463046daaab01e1640885999e7 762 main/binary-i386/Packages
+ 7676e0b91cf8f7c0e2eb745fc6cd55fbe77a2341 500 main/binary-i386/Packages.gz
+ 10d6e125eae41e24608734fa6967ca1adb60eabe 89 main/binary-i386/Release
+ d32807a31457ab463046daaab01e1640885999e7 762 main/binary-amd64/Packages
+ 7676e0b91cf8f7c0e2eb745fc6cd55fbe77a2341 500 main/binary-amd64/Packages.gz
+ 0c397b34c1ee4d84e2c3b67af4a14001ae16e8aa 90 main/binary-amd64/Release
+SHA256:
+ 72257f7c6c43b089a89c18f051ea6a046a38ddb3a9543dfd6d7c9431bce8b0f5 762 main/binary-i386/Packages
+ 81d5c888cbc6737809174858b159d04ac4c4eec2b9305da7833ce89ae13f6beb 500 main/binary-i386/Packages.gz
+ 624e8f7f0f751a9bc80bd21b01bed9866c5a6690976f92278c652e383302ad97 89 main/binary-i386/Release
+ 72257f7c6c43b089a89c18f051ea6a046a38ddb3a9543dfd6d7c9431bce8b0f5 762 main/binary-amd64/Packages
+ 81d5c888cbc6737809174858b159d04ac4c4eec2b9305da7833ce89ae13f6beb 500 main/binary-amd64/Packages.gz
+ 5501ffc36ad2b0f75336d73b613d864cfd71cf1987770340139d9c194e0cde35 90 main/binary-amd64/Release
