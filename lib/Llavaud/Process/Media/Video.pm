@@ -150,11 +150,7 @@ sub process {
 
 		my $cmd = "ffmpeg -nostdin -hide_banner -y -flags +global_header";
 
-        if ($main::OPTIONS{'verbose'} eq 'true') {
-            $cmd .= " -loglevel warning";
-        } else {
-            $cmd .= " -loglevel error";
-        }
+        $cmd .= ($main::OPTIONS{'verbose'} eq 'true') ? " -loglevel warning" : " -loglevel error";
 
         if (not defined $main::OPTIONS{'format'}{$_}{'rotate'} or $main::OPTIONS{'format'}{$_}{'rotate'} =~ '^(?:90|180|270)$') {
             $cmd .= " -noautorotate";
@@ -169,8 +165,8 @@ sub process {
             $cmd .= " -codec:v libx264";
         }
 
+        # get original audio codec
         my $caudio = `ffprobe -show_streams -select_streams a $obj->{'original'}->{'path'} 2>&1 | grep codec_name | sed 's/^codec_name=//'`;
-
         if (not defined $caudio) {
             carp "[$obj->{'original'}->{'path'}] Failed to get audio codec";
             return 0;
@@ -187,23 +183,27 @@ sub process {
         if (defined $main::OPTIONS{'format'}{$_}{'resize'} or defined $main::OPTIONS{'format'}{$_}{'rotate'}) {
 
             my @vf;
+
+            # rotate
             if (defined $main::OPTIONS{'format'}{$_}{'rotate'} and $main::OPTIONS{'format'}{$_}{'rotate'} =~ '^(?:90|180|270)$') {
+
+                # if forced rotation, remove rotate metadata
+                $cmd .= " -metadata:s:v rotate=0";
+
                 push @vf, "transpose=1" if $main::OPTIONS{'format'}{$_}{'rotate'} == 90;
                 push @vf, "transpose=1,transpose=1" if $main::OPTIONS{'format'}{$_}{'rotate'} == 180;
                 push @vf, "transpose=1,transpose=1,transpose=1" if $main::OPTIONS{'format'}{$_}{'rotate'} == 270;
             }
-            push @vf, "scale=iw*min(1\\,min($main::OPTIONS{'format'}{$_}{'resize'}/iw\\,$main::OPTIONS{'format'}{$_}{'resize'}/ih)):-1" if defined $main::OPTIONS{'format'}{$_}{'resize'};
+
+            # resize
+            push @vf, "scale=iw*min(1\\,min($main::OPTIONS{'format'}{$_}{'resize'}/iw\\,$main::OPTIONS{'format'}{$_}{'resize'}/ih)):-1"
+                if defined $main::OPTIONS{'format'}{$_}{'resize'};
 
             if (@vf) {
                 $cmd .= " -vf \"";
                 $cmd .= join(',', @vf);
                 $cmd .= "\"";
             }
-        }
-
-        # if forced rotation, remove rotate metadata
-        if (defined $main::OPTIONS{'format'}{$_}{'rotate'} and $main::OPTIONS{'format'}{$_}{'rotate'} =~ '^(?:90|180|270)$') {
-            $cmd .= " -metadata:s:v rotate=0";
         }
 
 		$cmd .= " $obj->{'final'}->{$_}->{'path'}";
