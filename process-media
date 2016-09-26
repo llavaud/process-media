@@ -400,12 +400,10 @@ This script will process (resize, compress...) photos and videos according to th
 
 It depends on the following linux binary:
 
-    * ffmpeg
     * jpeginfo
 
 It needs the following ubuntu packages installed:
 
-    * ffmpeg
     * jpeginfo
     * libimage-exiftool-perl
     * libimage-magick-perl

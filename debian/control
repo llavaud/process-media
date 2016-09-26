@@ -10,6 +10,6 @@ Vcs-Browser: https://github.com/llavaud/process-media
 
 Package: process-media
 Architecture: all
-Depends: perl (>=5.10), ffmpeg, jpeginfo, libimage-exiftool-perl, libimage-magick-perl, libmime-types-perl, libsys-cpu-perl, libterm-readkey-perl, libyaml-tiny-perl
+Depends: perl (>=5.10), jpeginfo, libimage-exiftool-perl, libimage-magick-perl, libmime-types-perl, libsys-cpu-perl, libterm-readkey-perl, libyaml-tiny-perl
 Description: A photos and videos processing script
  This script will process (resize, compress...) photos and videos according to the specified options.
