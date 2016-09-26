@@ -1,3 +1,10 @@
+process-media (0.9) stable; urgency=medium
+
+  * embed ffmpeg static binary version 3.1.3, close #8
+  * correcting a bug to get the audio codec
+
+ -- Laurent Lavaud <l.lavaud@gmail.com>  Mon, 26 Sep 2016 13:13:50 +0200
+
 process-media (0.8) stable; urgency=medium
 
   * correcting a bug with the video resize, now it is like for photo, resize is done only if larger than requested size, no upscaling
