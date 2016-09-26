@@ -1,6 +1,6 @@
 process-media usr/bin
 process-media.yaml etc
-ffmpeg/ffmpeg usr/local/bin
-ffmpeg/ffprobe usr/local/bin
+ffmpeg/ffmpeg usr/bin
+ffmpeg/ffprobe usr/bin
 lib/Llavaud/Process/Media/Photo.pm usr/share/perl5/Llavaud/Process/Media
 lib/Llavaud/Process/Media/Video.pm usr/share/perl5/Llavaud/Process/Media

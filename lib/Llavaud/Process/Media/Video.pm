@@ -12,8 +12,8 @@ use Image::Magick;
 use threads::shared;
 use Time::Piece;
 
-my $ffmpeg = (-f '/usr/local/bin/ffmpeg') ? '/usr/local/bin/ffmpeg' : './ffmpeg/ffmpeg';
-my $ffprobe = (-f '/usr/local/bin/ffprobe') ? '/usr/local/bin/ffprobe' : './ffmpeg/ffprobe';
+my $ffmpeg = (-f '/usr/bin/process-media-ffmpeg') ? '/usr/bin/process-media-ffmpeg' : './ffmpeg/process-media-ffmpeg';
+my $ffprobe = (-f '/usr/bin/process-media-ffprobe') ? '/usr/bin/process-media-ffprobe' : './ffmpeg/process-media-ffprobe';
 
 sub new {
 	my $class = shift;
