@@ -12,6 +12,9 @@ use Image::Magick;
 use threads::shared;
 use Time::Piece;
 
+my $ffmpeg = (-f '/usr/local/bin/ffmpeg') ? '/usr/local/bin/ffmpeg' : './ffmpeg/ffmpeg';
+my $ffprobe = (-f '/usr/local/bin/ffprobe') ? '/usr/local/bin/ffprobe' : './ffmpeg/ffprobe';
+
 sub new {
 	my $class = shift;
 
@@ -148,7 +151,7 @@ sub process {
 
 		print "[$obj->{'final'}->{$_}->{'path'}] Processing...\n" if $main::OPTIONS{'verbose'} eq 'true';
 
-        my $cmd = "ffmpeg -nostdin -hide_banner -y";
+        my $cmd = "$ffmpeg -nostdin -hide_banner -y";
 
         $cmd .= ($main::OPTIONS{'verbose'} eq 'true') ? " -loglevel warning" : " -loglevel error";
 
@@ -166,7 +169,7 @@ sub process {
         }
 
         # get original audio codec
-        chomp (my $caudio = `ffprobe -show_streams -select_streams a $obj->{'original'}->{'path'} 2>&1 | grep codec_name | sed 's/^codec_name=//'`);
+        chomp (my $caudio = `$ffprobe -show_streams -select_streams a $obj->{'original'}->{'path'} 2>&1 | grep codec_name | sed 's/^codec_name=//'`);
         if (not defined $caudio) {
             carp "[$obj->{'original'}->{'path'}] Failed to get audio codec";
             return 0;
@@ -176,12 +179,13 @@ sub process {
         if ($caudio eq 'aac') {
             $cmd .= " -codec:a copy";
         } else {
-            $cmd .= " -codec:a aac -b:a 160k -strict experimental";
+            $cmd .= " -codec:a aac -b:a 160k";
         }
 
-        # Keep all metadata
-        #$cmd .= " -map_metadata 0 -map_metadata:s:v 0:s:v -map_metadata:s:a 0:s:a";
-        $cmd .= " -map_metadata 0";
+        # Stripping of certains metadata must be done here, exiftool can't do this
+        if (defined $main::OPTIONS{'format'}{$_}{'strip'} and $main::OPTIONS{'format'}{$_}{'strip'} eq 'true') {
+            $cmd .= " -map_metadata -1";
+        }
 
         # filters
         if (defined $main::OPTIONS{'format'}{$_}{'resize'} or defined $main::OPTIONS{'format'}{$_}{'rotate'}) {
@@ -212,8 +216,6 @@ sub process {
 
         $cmd .= " -flags +global_header";
         $cmd .= " $obj->{'final'}->{$_}->{'path'}";
-
-        print "$cmd\n";
 
 		&execute($obj->{'final'}->{$_}->{'path'}, 'Failed to encode', $cmd);
 	}
@@ -261,7 +263,7 @@ sub thumbnail {
 
 		print "[$obj->{'final'}->{$_}->{'path'}] Generating thumbnail...\n" if $main::OPTIONS{'verbose'} eq 'true';
 
-		&execute($obj->{'final'}->{$_}->{'path'}, 'Failed to create thumbnail', "ffmpeg -y -loglevel error -i $obj->{'final'}->{$_}->{'path'} -vframes 1 $obj->{'final'}->{$_}->{'dir'}$obj->{'final'}->{'name'}.jpg");
+		&execute($obj->{'final'}->{$_}->{'path'}, 'Failed to create thumbnail', "$ffmpeg -y -loglevel error -i $obj->{'final'}->{$_}->{'path'} -vframes 1 $obj->{'final'}->{$_}->{'dir'}$obj->{'final'}->{'name'}.jpg");
 
 		my $image = Image::Magick->new();
 		if (my $err = $image->Read("$obj->{'final'}->{$_}->{'dir'}$obj->{'final'}->{'name'}.jpg")){
@@ -292,7 +294,7 @@ sub integrity {
 
 		print "[$obj->{'final'}->{$_}->{'path'}] Checking integrity...\n" if $main::OPTIONS{'verbose'} eq 'true';
 
-		&execute($obj->{'final'}->{$_}->{'path'}, 'File is corrupted', "ffmpeg -loglevel error -i $obj->{'final'}->{$_}->{'path'} -f null -");
+		&execute($obj->{'final'}->{$_}->{'path'}, 'File is corrupted', "$ffmpeg -loglevel error -i $obj->{'final'}->{$_}->{'path'} -f null -");
 	}
 
 	return 1;
