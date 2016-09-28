@@ -5,8 +5,9 @@ use warnings;
 
 use Carp qw/carp/;
 use File::Basename qw/fileparse/;
-use File::Copy qw/copy/;
+use File::Copy qw/copy move/;
 use File::Path qw/make_path/;
+use File::Temp qw/tempfile/;
 use Image::ExifTool qw/ImageInfo/;
 use Image::Magick;
 use threads::shared;
@@ -151,6 +152,8 @@ sub process {
 
 		print "[$obj->{'final'}->{$_}->{'path'}] Processing...\n" if $main::OPTIONS{'verbose'} eq 'true';
 
+        my $tmp_file = File::Temp->new(DIR => $obj->{'final'}->{$_}->{'dir'}, UNLINK => 1);
+
         my $cmd = "$ffmpeg -nostdin -hide_banner -y";
 
         $cmd .= ($main::OPTIONS{'verbose'} eq 'true') ? " -loglevel warning" : " -loglevel error";
@@ -159,7 +162,7 @@ sub process {
             $cmd .= " -noautorotate";
         }
 
-        $cmd .= " -i $obj->{'original'}->{'path'}";
+        $cmd .= " -i $obj->{'final'}->{$_}->{'path'}";
 
         # video codec
 		if (defined $main::OPTIONS{'format'}{$_}{'codec'} and $main::OPTIONS{'format'}{$_}{'codec'} eq 'x265') {
@@ -182,10 +185,10 @@ sub process {
             $cmd .= " -codec:a aac -b:a 160k";
         }
 
-        # Stripping of certains metadata must be done here, exiftool can't do this
-        if (defined $main::OPTIONS{'format'}{$_}{'strip'} and $main::OPTIONS{'format'}{$_}{'strip'} eq 'true') {
-            $cmd .= " -map_metadata -1";
-        }
+        # copy all metadata
+        $cmd .= " -map_metadata 0";
+        # if we force the copy of stream tags, orientation tag persist even after autorotate, which is problematic
+#        $cmd .= " -map_metadata 0 -map_metadata:s:v 0:s:v -map_metadata:s:a 0:s:a";
 
         # filters
         if (defined $main::OPTIONS{'format'}{$_}{'resize'} or defined $main::OPTIONS{'format'}{$_}{'rotate'}) {
@@ -215,9 +218,11 @@ sub process {
         }
 
         $cmd .= " -flags +global_header";
-        $cmd .= " $obj->{'final'}->{$_}->{'path'}";
+        $cmd .= " -f mp4 $tmp_file";
 
 		&execute($obj->{'final'}->{$_}->{'path'}, 'Failed to encode', $cmd);
+
+        move($tmp_file, $obj->{'final'}->{$_}->{'path'});
 	}
 
 	return 1;
@@ -234,6 +239,18 @@ sub strip {
 		next if defined $obj->{'final'}->{$_}->{'exist'} and $main::OPTIONS{'overwrite'} eq 'false';
 
 		print "[$obj->{'final'}->{$_}->{'path'}] Stripping...\n" if $main::OPTIONS{'verbose'} eq 'true';
+
+        my $tmp_file = File::Temp->new(DIR => $obj->{'final'}->{$_}->{'dir'}, UNLINK => 1);
+
+        my $cmd = "$ffmpeg -nostdin -hide_banner -y";
+        $cmd .= ($main::OPTIONS{'verbose'} eq 'true') ? " -loglevel warning" : " -loglevel error";
+        $cmd .= " -i $obj->{'final'}->{$_}->{'path'}";
+        $cmd .= " -codec copy";
+        $cmd .= " -map_metadata -1 -map_metadata:s:v -1 -map_metadata:s:a -1";
+        $cmd .= " -f mp4 $tmp_file";
+        &execute($obj->{'final'}->{$_}->{'path'}, 'Failed to encode', $cmd);
+
+        move($tmp_file, $obj->{'final'}->{$_}->{'path'});
 
 		# remove all tags
 		my $exif = Image::ExifTool->new();

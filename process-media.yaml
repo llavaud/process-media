@@ -35,18 +35,18 @@ web_photo:
 
   # resize in order to get the larger side set to this value
   # (only if it is larger, no upscale)
-  resize: '1920'
+  resize: 1920
 
   # compress the jpeg photo according to this value
-  # a low value result in a better compression but a lower quality image
+  # a low value result in a better compression but in a lower quality
   compress: 90
 
-  # if set to true, all metadata will be removed
-  # if set to a list of value, all metadata will be removed except the one(s) listed
+  # if set to true, all metadata will be removed except ones specified by strip_exclude
+  strip: true
+
+  # a comma separated list of tags that must not be deleted
   # for now only support the tag "orientation" and "gps"
-  strip:
-      - 'orientation'
-#     - 'gps'
+  strip_exclude: 'orientation'
 
   output_dir: 'web'
 
@@ -67,7 +67,7 @@ web_video:
   type: 'video'
   reencode: true
   rotate: 'auto'
-  resize: '1024'
+  resize: 1024
   strip: true
 
   # we want to generate a thumbnail image

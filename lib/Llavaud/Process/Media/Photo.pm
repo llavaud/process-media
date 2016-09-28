@@ -206,9 +206,9 @@ sub strip {
 			return 0;
 		}
 
-		if (ref($main::OPTIONS{'format'}{$fname}{'strip'}) eq 'ARRAY') {
+		if (defined $main::OPTIONS{'format'}{$fname}{'strip_exclude'}) {
 
-			foreach (@{ $main::OPTIONS{'format'}{$fname}{'strip'} }) {
+			foreach (split(',', $main::OPTIONS{'format'}{$fname}{'strip_exclude'})) {
 
 				if ($_ eq 'gps') {
 
