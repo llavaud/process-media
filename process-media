@@ -51,7 +51,7 @@ if (defined $opts->{'config'}) {
     die "Config file \'$opts->{'config'}\' not found\n" unless -f $opts->{'config'};
     $config_file = $opts->{'config'};
 } else {
-    $config_file = (-f '/etc/process-media.yaml') ? '/etc/process-media.yaml' : 'process-media.yaml';
+    $config_file = ($0 eq '/usr/bin/process-media') ? '/etc/process-media.yaml' : 'process-media.yaml';
 }
 
 my $conf = YAML::Tiny->read($config_file);

@@ -48,8 +48,8 @@ Once the packages are installed, you just need to extract the archive
 
 First you need to define the different formats you want in the configuration file, the script will search for a configuration file by respecting the following order:
 
-1. **`/etc/process-media.yaml`**
-2. **`process-media.yaml`**
+1. **`process-media.yaml`**
+2. **`/etc/process-media.yaml`**
 
 Here is a photo format example:
 
