@@ -13,8 +13,8 @@ use Image::Magick;
 use threads::shared;
 use Time::Piece;
 
-my $ffmpeg = (-f '/usr/bin/process-media-ffmpeg') ? '/usr/bin/process-media-ffmpeg' : './ffmpeg/process-media-ffmpeg';
-my $ffprobe = (-f '/usr/bin/process-media-ffprobe') ? '/usr/bin/process-media-ffprobe' : './ffmpeg/process-media-ffprobe';
+my $ffmpeg = ($0 eq '/usr/bin/process-media') ? '/usr/bin/process-media-ffmpeg' : './ffmpeg/process-media-ffmpeg';
+my $ffprobe = ($0 eq '/usr/bin/process-media') ? '/usr/bin/process-media-ffprobe' : './ffmpeg/process-media-ffprobe';
 
 sub new {
 	my $class = shift;
@@ -240,19 +240,44 @@ sub strip {
 
 		print "[$obj->{'final'}->{$_}->{'path'}] Stripping...\n" if $main::OPTIONS{'verbose'} eq 'true';
 
-        my $tmp_file = File::Temp->new(DIR => $obj->{'final'}->{$_}->{'dir'}, UNLINK => 1);
+        my $tmp_data;
 
+        # dump metadata
+        if (defined $main::OPTIONS{'format'}{$_}{'strip_exclude'}) {
+            $tmp_data = File::Temp->new(DIR => $obj->{'final'}->{$_}->{'dir'});
+            my $cmd = "$ffmpeg -nostdin -hide_banner -y";
+            $cmd .= ($main::OPTIONS{'verbose'} eq 'true') ? " -loglevel warning" : " -loglevel error";
+            $cmd .= " -i $obj->{'final'}->{$_}->{'path'}";
+            $cmd .= " -f ffmetadata $tmp_data";
+            &execute($obj->{'final'}->{$_}->{'path'}, 'Failed to encode', $cmd);
+            &edit_metadata($tmp_data);
+        }
+
+        my $tmp_video = File::Temp->new(DIR => $obj->{'final'}->{$_}->{'dir'});
+
+        # strip all metadata
         my $cmd = "$ffmpeg -nostdin -hide_banner -y";
         $cmd .= ($main::OPTIONS{'verbose'} eq 'true') ? " -loglevel warning" : " -loglevel error";
         $cmd .= " -i $obj->{'final'}->{$_}->{'path'}";
         $cmd .= " -codec copy";
         $cmd .= " -map_metadata -1 -map_metadata:s:v -1 -map_metadata:s:a -1";
-        $cmd .= " -f mp4 $tmp_file";
+        $cmd .= " -f mp4 $tmp_video";
         &execute($obj->{'final'}->{$_}->{'path'}, 'Failed to encode', $cmd);
+        move($tmp_video, $obj->{'final'}->{$_}->{'path'});
 
-        move($tmp_file, $obj->{'final'}->{$_}->{'path'});
+        # import wanted metadata
+        if (defined $main::OPTIONS{'format'}{$_}{'strip_exclude'}) {
+            my $tmp_video = File::Temp->new(DIR => $obj->{'final'}->{$_}->{'dir'});
+            my $cmd = "$ffmpeg -nostdin -hide_banner -y";
+            $cmd .= ($main::OPTIONS{'verbose'} eq 'true') ? " -loglevel warning" : " -loglevel error";
+            $cmd .= " -i $obj->{'final'}->{$_}->{'path'}";
+            $cmd .= " -i $tmp_data -map_metadata 1 -codec copy";
+            $cmd .= " -f mp4 $tmp_video";
+            &execute($obj->{'final'}->{$_}->{'path'}, 'Failed to encode', $cmd);
+            move($tmp_video, $obj->{'final'}->{$_}->{'path'});
+        }
 
-		# remove all tags
+		# strip some more metadata
 		my $exif = Image::ExifTool->new();
 		my ($ret, $err) = $exif->SetNewValue('*');
 		if (defined $err) {
@@ -365,6 +390,35 @@ sub execute {
 	system('stty sane');
 
 	return 1;
+}
+
+sub edit_metadata {
+    my $file = shift;
+
+    open(my $fr, $file) or die "Failed to open file \'$file\': $!\n";
+    my @ori = <$fr>;
+    close $fr;
+
+    open(my $fw, '>'.$file) or die "Failed to open file \'$file\': $!\n";
+    foreach my $l (@ori) {
+        my $keep = 0;
+        if ($l =~ /^;FFMETADATA\d+$/) {
+            print $fw $l;
+            next;
+        }
+        foreach (split(',', $main::OPTIONS{'format'}{$_}{'strip_exclude'})) {
+            if ($_ eq 'gps') {
+                $keep = 1 if $l =~ /^location/;
+            }
+            elsif ($_ eq 'orientation') {
+                $keep = 1 if $l =~ /^rotate/;
+            }
+        }
+        print $fw $l if $keep;
+    }
+    close $fw;
+
+    return 1;
 }
 
 1;
