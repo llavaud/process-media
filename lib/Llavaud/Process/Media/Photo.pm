@@ -33,7 +33,7 @@ sub init {
 
 	$obj->{'original'}->{'path'} = $f;
 
-	my ($name, $dir, $ext) = fileparse($f, qr/\.[^.]*/);
+	my ($name, $dir, $ext) = fileparse($f, qr/\.[^.]*/x);
 
 	$obj->{'original'}->{'name'} = $name;
 	$obj->{'original'}->{'dir'} = $dir;
@@ -44,9 +44,9 @@ sub init {
 		next if $main::OPTIONS{'format'}{$_}{'type'} ne 'photo';
 		$obj->{'final'}->{$_} = &share({});
 		if (defined $main::OPTIONS{'format'}{$_}{'output_dir'}) {
-			$main::OPTIONS{'format'}{$_}{'output_dir'} =~ s/\/+$//;
+			$main::OPTIONS{'format'}{$_}{'output_dir'} =~ s/\/+$//x;
 			# absolute path
-			if ($main::OPTIONS{'format'}{$_}{'output_dir'} =~ /^\//) {
+			if ($main::OPTIONS{'format'}{$_}{'output_dir'} =~ /^\//x) {
 				$obj->{'final'}->{$_}->{'dir'} = $main::OPTIONS{'format'}{$_}{'output_dir'}.'/';
 			} else {
 				$obj->{'final'}->{$_}->{'dir'} = $obj->{'original'}->{'dir'}.$main::OPTIONS{'format'}{$_}{'output_dir'}.'/';
@@ -260,10 +260,10 @@ sub search_duplicate {
 	my ($class, @files) = @_;
 
 	foreach my $i (0 .. $#files) {
-		next if ref($files[$i]) ne 'Photo';
+		next if ref($files[$i]) ne 'Llavaud::Process::Media::Photo';
 		my %same;
 		foreach my $j (0 .. $#files) {
-			next if ref($files[$j]) ne 'Photo';
+			next if ref($files[$j]) ne 'Llavaud::Process::Media::Photo';
 			next if $i == $j;
 			if ($files[$i]->{'final'}->{'name'} eq $files[$j]->{'final'}->{'name'}) {
 				$same{$i} = 1;

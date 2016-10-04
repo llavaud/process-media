@@ -72,7 +72,7 @@ if (scalar @objects == 0) {
         print "Found ".scalar @objects." files...\n";
         ReadMode 4;
         my $key = '';
-        while($key !~ /^(?:y|n)$/) {
+        while($key !~ /^(?:y|n)$/x) {
             1 while defined ReadKey -1; # discard any previous input
             print "Proceed ? (y/n): ";
             $key = ReadKey 0;
@@ -130,7 +130,7 @@ sub thread {
             $obj->create();
             $obj->process();
             $obj->strip();
-            $obj->thumbnail() if ref($obj) eq 'Video';
+            $obj->thumbnail() if ref($obj) eq 'Llavaud::Process::Media::Video';
             $obj->integrity();
         }
     }
@@ -227,7 +227,7 @@ sub check_conf {
             if not exists $o{$_};
 
         die "Bad value '$conf->[0]->{$_}' for option '$_' in config file\n"
-            if $conf->[0]->{$_} !~ /$o{$_}/;
+            if $conf->[0]->{$_} !~ /$o{$_}/x;
     }
 
     foreach (keys %o) {
@@ -249,13 +249,13 @@ sub check_conf {
 
     # format
     foreach my $fname (keys %{ $conf->[1] }) {
-        die "Bad format name '$fname' in config file" if $fname !~ /^[\w-]+$/;
+        die "Bad format name '$fname' in config file" if $fname !~ /^[\w-]+$/x;
 
         foreach (keys %{ $conf->[1]->{$fname} }) {
             die "Unknown option '$_' in format '$fname' in config file\n"
                 if not exists $f{$_};
             die "Bad value '$conf->[1]->{$fname}->{$_}' for option '$_' in format '$fname' in config file"
-                if $conf->[1]->{$fname}->{$_} !~ /$f{$_}/;
+                if $conf->[1]->{$fname}->{$_} !~ /$f{$_}/x;
         }
 
         die "No type defined for format '$fname' in config file\n"
@@ -273,7 +273,7 @@ sub check_params {
     if (defined $opts->{'type'}) {
         foreach (split(',', $opts->{'type'})) {
             die "Bad type of files to process: $_, see help (-h) for supported type\n"
-                if !/^(?:photo|video)$/;
+                if !/^(?:photo|video)$/x;
             my $found = 0;
             foreach my $k (keys %{ $conf->[1] }) {
                 $found = 1 if $conf->[1]->{$k}->{'type'} eq $_;
@@ -302,9 +302,9 @@ sub get_files {
         push @files, $path;
     }
     elsif (-d $path) {
-        $path .= '/' unless $path =~ /\/$/;
+        $path .= '/' unless $path =~ /\/$/x;
         opendir my $dh, $path or die "Failed to read directory \'$path\': $!\n";
-        foreach (sort grep { -f ($path.$_) && !/^\./ } readdir $dh) {
+        foreach (sort grep { -f ($path.$_) && !/^\./x } readdir $dh) {
             push @files, $path.$_;
         }
         closedir $dh;
@@ -323,11 +323,11 @@ sub get_objects {
         my $obj;
         my $type = $mt->mimeTypeOf($_);
         if (defined $type and $type eq 'image/jpeg') {
-            next if $OPTIONS{'type'} !~ /photo/;
+            next if $OPTIONS{'type'} !~ /photo/x;
             $obj = Llavaud::Process::Media::Photo->new();
         }
-        elsif (defined $type and $type =~ '^video\/') {
-            next if $OPTIONS{'type'} !~ /video/;
+        elsif (defined $type and $type =~ /^video\//x) {
+            next if $OPTIONS{'type'} !~ /video/x;
             $obj = Llavaud::Process::Media::Video->new();
         }
         if (defined $obj) {
@@ -380,6 +380,7 @@ It needs the following ubuntu packages installed:
     * libmime-types-perl
     * libsys-cpu-perl
     * libterm-readkey-perl
+    * libyaml-tiny-perl
 
 =head1 AUTHOR
 

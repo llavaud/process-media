@@ -8,10 +8,14 @@ use File::Basename qw/fileparse/;
 use File::Copy qw/copy move/;
 use File::Path qw/make_path/;
 use File::Temp qw/tempfile/;
+use IO::File;
+use IPC::Open3 qw/open3/;
 use Image::ExifTool qw/ImageInfo/;
 use Image::Magick;
 use threads::shared;
 use Time::Piece;
+
+local $SIG{'CHLD'} = 'IGNORE';
 
 my $ffmpeg = ($0 eq '/usr/bin/process-media') ? '/usr/bin/process-media-ffmpeg' : './ffmpeg/process-media-ffmpeg';
 my $ffprobe = ($0 eq '/usr/bin/process-media') ? '/usr/bin/process-media-ffprobe' : './ffmpeg/process-media-ffprobe';
@@ -37,7 +41,7 @@ sub init {
 
 	$obj->{'original'}->{'path'} = $f;
 
-	my ($name, $dir, $ext) = fileparse($f, qr/\.[^.]*/);
+	my ($name, $dir, $ext) = fileparse($f, qr/\.[^.]*/x);
 
 	$obj->{'original'}->{'name'} = $name;
 	$obj->{'original'}->{'dir'} = $dir;
@@ -48,9 +52,9 @@ sub init {
 		next if $main::OPTIONS{'format'}{$_}{'type'} ne 'video';
 		$obj->{'final'}->{$_} = &share({});
 		if (defined $main::OPTIONS{'format'}{$_}{'output_dir'}) {
-			$main::OPTIONS{'format'}{$_}{'output_dir'} =~ s/\/+$//;
+			$main::OPTIONS{'format'}{$_}{'output_dir'} =~ s/\/+$//x;
 			# absolute path
-			if ($main::OPTIONS{'format'}{$_}{'output_dir'} =~ /^\//) {
+			if ($main::OPTIONS{'format'}{$_}{'output_dir'} =~ /^\//x) {
 				$obj->{'final'}->{$_}->{'dir'} = $main::OPTIONS{'format'}{$_}{'output_dir'}.'/';
 			} else {
 				$obj->{'final'}->{$_}->{'dir'} = $obj->{'original'}->{'dir'}.$main::OPTIONS{'format'}{$_}{'output_dir'}.'/';
@@ -172,14 +176,15 @@ sub process {
         }
 
         # get original audio codec
-        chomp (my $caudio = `$ffprobe -show_streams -select_streams a $obj->{'original'}->{'path'} 2>&1 | grep codec_name | sed 's/^codec_name=//'`);
-        if (not defined $caudio) {
-            carp "[$obj->{'original'}->{'path'}] Failed to get audio codec";
+        my ($in, $out, $err);
+        open3($in, $out, $err, "$ffprobe -show_streams -select_streams a $obj->{'original'}->{'path'} 2>&1 | grep codec_name | sed 's/^codec_name=//'");
+        if (not defined $out) {
+            carp "[$obj->{'original'}->{'path'}] Failed to get audio codec: $err";
             return 0;
         }
 
         # audio codec
-        if ($caudio eq 'aac') {
+        if ($out eq 'aac') {
             $cmd .= " -codec:a copy";
         } else {
             $cmd .= " -codec:a aac -b:a 160k";
@@ -267,14 +272,14 @@ sub strip {
 
         # import wanted metadata
         if (defined $main::OPTIONS{'format'}{$_}{'strip_exclude'}) {
-            my $tmp_video = File::Temp->new(DIR => $obj->{'final'}->{$_}->{'dir'});
-            my $cmd = "$ffmpeg -nostdin -hide_banner -y";
-            $cmd .= ($main::OPTIONS{'verbose'} eq 'true') ? " -loglevel warning" : " -loglevel error";
-            $cmd .= " -i $obj->{'final'}->{$_}->{'path'}";
-            $cmd .= " -i $tmp_data -map_metadata 1 -codec copy";
-            $cmd .= " -f mp4 $tmp_video";
-            &execute($obj->{'final'}->{$_}->{'path'}, 'Failed to encode', $cmd);
-            move($tmp_video, $obj->{'final'}->{$_}->{'path'});
+            my $tmp_video2 = File::Temp->new(DIR => $obj->{'final'}->{$_}->{'dir'});
+            my $cmd2 = "$ffmpeg -nostdin -hide_banner -y";
+            $cmd2 .= ($main::OPTIONS{'verbose'} eq 'true') ? " -loglevel warning" : " -loglevel error";
+            $cmd2 .= " -i $obj->{'final'}->{$_}->{'path'}";
+            $cmd2 .= " -i $tmp_data -map_metadata 1 -codec copy";
+            $cmd2 .= " -f mp4 $tmp_video2";
+            &execute($obj->{'final'}->{$_}->{'path'}, 'Failed to encode', $cmd2);
+            move($tmp_video2, $obj->{'final'}->{$_}->{'path'});
         }
 
 		# strip some more metadata
@@ -346,10 +351,10 @@ sub search_duplicate {
 	my ($class, @files) = @_;
 
 	foreach my $i (0 .. $#files) {
-		next if ref($files[$i]) ne 'Video';
+		next if ref($files[$i]) ne 'Llavaud::Process::Media::Video';
 		my %same;
 		foreach my $j (0 .. $#files) {
-			next if ref($files[$j]) ne 'Video';
+			next if ref($files[$j]) ne 'Llavaud::Process::Media::Video';
 			next if $i == $j;
 			if ($files[$i]->{'final'}->{'name'} eq $files[$j]->{'final'}->{'name'}) {
 				$same{$i} = 1;
@@ -395,23 +400,23 @@ sub execute {
 sub edit_metadata {
     my $file = shift;
 
-    open(my $fr, $file) or die "Failed to open file \'$file\': $!\n";
+    my $fr = IO::File->new($file, q{<});
     my @ori = <$fr>;
     close $fr;
 
-    open(my $fw, '>'.$file) or die "Failed to open file \'$file\': $!\n";
+    my $fw = IO::File->new($file, q{>});
     foreach my $l (@ori) {
         my $keep = 0;
-        if ($l =~ /^;FFMETADATA\d+$/) {
+        if ($l =~ /^;FFMETADATA\d+$/x) {
             print $fw $l;
             next;
         }
         foreach (split(',', $main::OPTIONS{'format'}{$_}{'strip_exclude'})) {
             if ($_ eq 'gps') {
-                $keep = 1 if $l =~ /^location/;
+                $keep = 1 if $l =~ /^location/x;
             }
             elsif ($_ eq 'orientation') {
-                $keep = 1 if $l =~ /^rotate/;
+                $keep = 1 if $l =~ /^rotate/x;
             }
         }
         print $fw $l if $keep;
