@@ -9,7 +9,6 @@ use File::Copy qw/copy move/;
 use File::Path qw/make_path/;
 use File::Temp qw/tempfile/;
 use IO::File;
-use IPC::Open3 qw/open3/;
 use Image::ExifTool qw/ImageInfo/;
 use Image::Magick;
 use threads::shared;
@@ -41,7 +40,7 @@ sub init {
 
 	$obj->{'original'}->{'path'} = $f;
 
-	my ($name, $dir, $ext) = fileparse($f, qr/\.[^.]*/x);
+	my ($name, $dir, $ext) = fileparse($f, qr/\.[^.]*/);
 
 	$obj->{'original'}->{'name'} = $name;
 	$obj->{'original'}->{'dir'} = $dir;
@@ -52,9 +51,9 @@ sub init {
 		next if $main::OPTIONS{'format'}{$_}{'type'} ne 'video';
 		$obj->{'final'}->{$_} = &share({});
 		if (defined $main::OPTIONS{'format'}{$_}{'output_dir'}) {
-			$main::OPTIONS{'format'}{$_}{'output_dir'} =~ s/\/+$//x;
+			$main::OPTIONS{'format'}{$_}{'output_dir'} =~ s/\/+$//;
 			# absolute path
-			if ($main::OPTIONS{'format'}{$_}{'output_dir'} =~ /^\//x) {
+			if ($main::OPTIONS{'format'}{$_}{'output_dir'} =~ /^\//) {
 				$obj->{'final'}->{$_}->{'dir'} = $main::OPTIONS{'format'}{$_}{'output_dir'}.'/';
 			} else {
 				$obj->{'final'}->{$_}->{'dir'} = $obj->{'original'}->{'dir'}.$main::OPTIONS{'format'}{$_}{'output_dir'}.'/';
@@ -156,7 +155,7 @@ sub process {
 
 		print "[$obj->{'final'}->{$_}->{'path'}] Processing...\n" if $main::OPTIONS{'verbose'} eq 'true';
 
-        my $tmp_file = File::Temp->new(DIR => $obj->{'final'}->{$_}->{'dir'}, UNLINK => 1);
+        my $tmp_file = File::Temp->new(DIR => $obj->{'final'}->{$_}->{'dir'});
 
         my $cmd = "$ffmpeg -nostdin -hide_banner -y";
 
@@ -176,15 +175,14 @@ sub process {
         }
 
         # get original audio codec
-        my ($in, $out, $err);
-        open3($in, $out, $err, "$ffprobe -show_streams -select_streams a $obj->{'original'}->{'path'} 2>&1 | grep codec_name | sed 's/^codec_name=//'");
-        if (not defined $out) {
-            carp "[$obj->{'original'}->{'path'}] Failed to get audio codec: $err";
+        chomp (my $caudio = `$ffprobe -show_streams -select_streams a $obj->{'original'}->{'path'} 2>&1 | grep codec_name | sed 's/^codec_name=//'`);
+        if (not defined $caudio) {
+            carp "[$obj->{'original'}->{'path'}] Failed to get audio codec";
             return 0;
         }
 
         # audio codec
-        if ($out eq 'aac') {
+        if ($caudio eq 'aac') {
             $cmd .= " -codec:a copy";
         } else {
             $cmd .= " -codec:a aac -b:a 160k";
@@ -407,16 +405,16 @@ sub edit_metadata {
     my $fw = IO::File->new($file, q{>});
     foreach my $l (@ori) {
         my $keep = 0;
-        if ($l =~ /^;FFMETADATA\d+$/x) {
+        if ($l =~ /^;FFMETADATA\d+$/) {
             print $fw $l;
             next;
         }
         foreach (split(',', $main::OPTIONS{'format'}{$_}{'strip_exclude'})) {
             if ($_ eq 'gps') {
-                $keep = 1 if $l =~ /^location/x;
+                $keep = 1 if $l =~ /^location/;
             }
             elsif ($_ eq 'orientation') {
-                $keep = 1 if $l =~ /^rotate/x;
+                $keep = 1 if $l =~ /^rotate/;
             }
         }
         print $fw $l if $keep;

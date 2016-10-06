@@ -33,7 +33,7 @@ sub init {
 
 	$obj->{'original'}->{'path'} = $f;
 
-	my ($name, $dir, $ext) = fileparse($f, qr/\.[^.]*/x);
+	my ($name, $dir, $ext) = fileparse($f, qr/\.[^.]*/);
 
 	$obj->{'original'}->{'name'} = $name;
 	$obj->{'original'}->{'dir'} = $dir;
@@ -44,9 +44,9 @@ sub init {
 		next if $main::OPTIONS{'format'}{$_}{'type'} ne 'photo';
 		$obj->{'final'}->{$_} = &share({});
 		if (defined $main::OPTIONS{'format'}{$_}{'output_dir'}) {
-			$main::OPTIONS{'format'}{$_}{'output_dir'} =~ s/\/+$//x;
+			$main::OPTIONS{'format'}{$_}{'output_dir'} =~ s/\/+$//;
 			# absolute path
-			if ($main::OPTIONS{'format'}{$_}{'output_dir'} =~ /^\//x) {
+			if ($main::OPTIONS{'format'}{$_}{'output_dir'} =~ /^\//) {
 				$obj->{'final'}->{$_}->{'dir'} = $main::OPTIONS{'format'}{$_}{'output_dir'}.'/';
 			} else {
 				$obj->{'final'}->{$_}->{'dir'} = $obj->{'original'}->{'dir'}.$main::OPTIONS{'format'}{$_}{'output_dir'}.'/';
@@ -220,6 +220,7 @@ sub strip {
 					}
 				}
 				elsif ($_ eq 'orientation') {
+
 					# keep Orientation tag
 					$ret = $exif->SetNewValuesFromFile($obj->{'final'}->{$fname}->{'path'}, 'EXIF:Orientation');
 					if (defined $ret->{'Error'}) {
