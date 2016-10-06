@@ -57,10 +57,10 @@ Here is a photo format example:
 web_photo:
   type: 'photo'
   rotate: 'auto'
-  resize: '1920'
+  resize: 1920
   compress: 90
-  strip:
-    - 'gps'
+  strip: true
+  strip_exclude: 'gps'
   output_dir: 'web'
 ```
 
