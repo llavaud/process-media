@@ -66,7 +66,7 @@ web_photo:
 
 Here we define a photo format named **web_photo**.
 
-The resulting photo will be auto-rotated, resized, compressed and all metadata will be removed except GPS informations.
+The resulting photo(s) will be auto-rotated, resized, compressed and all metadata will be removed except GPS informations.
 
 ## CLI
 
