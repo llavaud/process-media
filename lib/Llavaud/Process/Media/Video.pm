@@ -279,18 +279,6 @@ sub strip {
             &execute($obj->{'final'}->{$_}->{'path'}, 'Failed to encode', $cmd2);
             move($tmp_video2, $obj->{'final'}->{$_}->{'path'});
         }
-
-		# strip some more metadata
-		my $exif = Image::ExifTool->new();
-		my ($ret, $err) = $exif->SetNewValue('*');
-		if (defined $err) {
-			carp "[$obj->{'final'}->{$_}->{'path'}] Failed to remove tags, $err";
-			return 0;
-		}
-		unless ($exif->WriteInfo($obj->{'final'}->{$_}->{'path'})) {
-			carp "[$obj->{'final'}->{$_}->{'path'}] Failed to write, ".$exif->GetValue('Error');
-			return 0;
-		}
 	}
 
 	return 1;
