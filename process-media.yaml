@@ -58,7 +58,11 @@ archive_video:
 
   # use the x264 video codec (it is the default)
   # for now only support the "x264" and "x265" video codec
-  codec: 'x264'
+  vcodec: 'x264'
+
+  # allow to specify any ffmpeg video codec params
+  # see "x264 --help" or "x265 --help" for available options
+  #vcodec_params: 'crf=20'
 
   rotate: 'auto'
   output_dir: 'archive/videos'
