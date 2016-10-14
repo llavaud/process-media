@@ -168,10 +168,10 @@ sub process {
         $cmd .= " -i $obj->{'final'}->{$_}->{'path'}";
 
         # video codec
-		if (defined $main::OPTIONS{'format'}{$_}{'codec'} and $main::OPTIONS{'format'}{$_}{'codec'} eq 'x265') {
-			$cmd .= " -codec:v libx265 -x265-params crf=23:log-level=error";
+		if (defined $main::OPTIONS{'format'}{$_}{'vcodec'} and $main::OPTIONS{'format'}{$_}{'vcodec'} eq 'x265') {
+			$cmd .= defined $main::OPTIONS{'format'}{$_}{'vcodec_params'} ? " -codec:v libx265 -x265-params $main::OPTIONS{'format'}{$_}{'vcodec_params'}:log-level=error" : " -codec:v libx265";
 		} else {
-            $cmd .= " -codec:v libx264";
+            $cmd .= defined $main::OPTIONS{'format'}{$_}{'vcodec_params'} ? " -codec:v libx264 -x264-params $main::OPTIONS{'format'}{$_}{'vcodec_params'}" : " -codec:v libx264";
         }
 
         # get original audio codec
@@ -222,6 +222,8 @@ sub process {
 
         $cmd .= " -flags +global_header";
         $cmd .= " -f mp4 $tmp_file";
+
+#        print "$cmd\n" if $main::OPTIONS{'verbose'} eq 'true';
 
 		&execute($obj->{'final'}->{$_}->{'path'}, 'Failed to encode', $cmd);
 
