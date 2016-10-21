@@ -72,16 +72,16 @@ sub get_name {
 	else {
 		my $info = ImageInfo($obj->{'original'}->{'path'}, 'CreateDate');
 
-		if (not exists $info->{'CreateDate'}) {
-			carp "[$obj->{'original'}->{'path'}] Failed to get capture time";
-			return 0;
-		}
+        if (not exists $info->{'CreateDate'} or $info->{'CreateDate'} eq '0000:00:00 00:00:00') {
+            print STDERR "[$obj->{'original'}->{'path'}] Failed to get capture time, keeping original name...\n";
+            $obj->{'final'}->{'name'} = $obj->{'original'}->{'name'};
+        } else {
+            my $t = Time::Piece->strptime($info->{'CreateDate'}, "%Y:%m:%d %H:%M:%S");
+            $obj->{'final'}->{'name'} = $t->ymd('').'-'.$t->hms('');
 
-		my $t = Time::Piece->strptime($info->{'CreateDate'}, "%Y:%m:%d %H:%M:%S");
-		$obj->{'final'}->{'name'} = $t->ymd('').'-'.$t->hms('');
-
-		print "[$obj->{'original'}->{'path'}] Renamed to \'$obj->{'final'}->{'name'}\'\n"
-		if $main::OPTIONS{'verbose'} eq 'true';
+            print "[$obj->{'original'}->{'path'}] Renamed to \'$obj->{'final'}->{'name'}\'\n"
+                if $main::OPTIONS{'verbose'} eq 'true';
+        }
 	}
 
 	# set final path
