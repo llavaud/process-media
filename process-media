@@ -208,21 +208,21 @@ sub set_options {
         }
     }
 
-	if (defined $params{'format'}) {
+    if (defined $params{'format'}) {
         foreach my $fname (split(',', $params{'format'})) {
-			foreach my $t (split(',', $OPTIONS{'type'})) {
-				$OPTIONS{'format'}{$fname} = $conf->[1]->{$fname}
-					if $conf->[1]->{$fname}->{'type'} eq $t;
-			}
+            foreach my $t (split(',', $OPTIONS{'type'})) {
+                $OPTIONS{'format'}{$fname} = $conf->[1]->{$fname}
+                    if $conf->[1]->{$fname}->{'type'} eq $t;
+            }
         }
     } else {
-		foreach my $fname (keys %{ $conf->[1] }) {
-			foreach my $t (split(',', $OPTIONS{'type'})) {
-				$OPTIONS{'format'}{$fname} = $conf->[1]->{$fname}
-					if $conf->[1]->{$fname}->{'type'} eq $t;
-			}
-		}
-	}
+        foreach my $fname (keys %{ $conf->[1] }) {
+            foreach my $t (split(',', $OPTIONS{'type'})) {
+                $OPTIONS{'format'}{$fname} = $conf->[1]->{$fname}
+                    if $conf->[1]->{$fname}->{'type'} eq $t;
+            }
+        }
+    }
 
     &clean_exit("No format found with your type and format combination")
         if not exists $OPTIONS{'format'};
