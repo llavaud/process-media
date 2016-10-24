@@ -180,7 +180,7 @@ sub set_options {
 
     # verbose
     $OPTIONS{'verbose'} = $params{'verbose'} ? 'true' : $conf->[0]->{'verbose'};
-    
+
     # overwrite
     $OPTIONS{'overwrite'} = $params{'overwrite'} ? 'true' : $conf->[0]->{'overwrite'};
 
@@ -212,22 +212,22 @@ sub set_options {
         foreach my $fname (split(',', $params{'format'})) {
             foreach my $t (split(',', $OPTIONS{'type'})) {
                 $OPTIONS{'format'}{$fname} = $conf->[1]->{$fname}
-                    if $conf->[1]->{$fname}->{'type'} eq $t;
+                if $conf->[1]->{$fname}->{'type'} eq $t;
             }
         }
     } else {
         foreach my $fname (keys %{ $conf->[1] }) {
             foreach my $t (split(',', $OPTIONS{'type'})) {
                 $OPTIONS{'format'}{$fname} = $conf->[1]->{$fname}
-                    if $conf->[1]->{$fname}->{'type'} eq $t;
+                if $conf->[1]->{$fname}->{'type'} eq $t;
             }
         }
     }
 
     &clean_exit("No format found with your type and format combination")
-        if not exists $OPTIONS{'format'};
+    if not exists $OPTIONS{'format'};
 
-	return 1;
+    return 1;
 }
 
 sub check_conf {
@@ -242,10 +242,10 @@ sub check_conf {
     # options
     foreach (keys %{ $conf->[0] }) {
         &clean_exit("Unknown option '$_' in config file")
-            if not exists $o{$_};
+        if not exists $o{$_};
 
         &clean_exit("Bad value '$conf->[0]->{$_}' for option '$_' in config file")
-            if $conf->[0]->{$_} !~ /$o{$_}/;
+        if $conf->[0]->{$_} !~ /$o{$_}/;
     }
 
     foreach (keys %o) {
@@ -272,13 +272,13 @@ sub check_conf {
 
         foreach (keys %{ $conf->[1]->{$fname} }) {
             &clean_exit("Unknown option '$_' in format '$fname' in config file")
-                if not exists $f{$_};
+            if not exists $f{$_};
             &clean_exit("Bad value '$conf->[1]->{$fname}->{$_}' for option '$_' in format '$fname' in config file")
-                if $conf->[1]->{$fname}->{$_} !~ /$f{$_}/;
+            if $conf->[1]->{$fname}->{$_} !~ /$f{$_}/;
         }
 
         &clean_exit("No type defined for format '$fname' in config file")
-            if not defined $conf->[1]->{$fname}->{'type'};
+        if not defined $conf->[1]->{$fname}->{'type'};
     }
 
     return 1;
@@ -292,7 +292,7 @@ sub check_params {
     if (defined $params{'type'}) {
         foreach (split(',', $params{'type'})) {
             &clean_exit("Bad type of files to process: $_, see help (-h) for supported type")
-                if !/^(?:photo|video)$/;
+            if !/^(?:photo|video)$/;
             my $found = 0;
             foreach my $k (keys %{ $conf->[1] }) {
                 $found = 1 if $conf->[1]->{$k}->{'type'} eq $_;
