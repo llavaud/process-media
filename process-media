@@ -373,7 +373,7 @@ sub clean_exit {
 sub usage {
     print << "EOF";
 
-Usage: $0 [options] <path>
+Usage: $0 <path> [options]
 
 <path> is the path to photos or videos to process
 
