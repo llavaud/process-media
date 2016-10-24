@@ -1,9 +1,9 @@
 #!/usr/bin/env perl
 
+require 5.010;
+
 use strict;
 use warnings;
-
-require 5.010;
 
 use Getopt::Long qw/GetOptions/;
 use MIME::Types;
@@ -29,27 +29,16 @@ my $config_file;
 my $path;
 my @threads;
 my @objects;
-my $opts = {};
+my %params;
 our %OPTIONS;
 
 ## MAIN
 
-GetOptions(
-    $opts,
-    'type=s',
-    'format=s',
-    'config=s',
-    'max_threads=i',
-    'batch',
-    'keep_name',
-    'verbose',
-    'overwrite',
-    'help',
-) or die "Error in command line arguments\n";
+&parse_cmdline(\%params);
 
-if (defined $opts->{'config'}) {
-    die "Config file \'$opts->{'config'}\' not found\n" unless -f $opts->{'config'};
-    $config_file = $opts->{'config'};
+if (defined $params{'config'}) {
+    &clean_exit("Config file \'$params{'config'}\' not found") unless -f $params{'config'};
+    $config_file = $params{'config'};
 } else {
     $config_file = ($0 eq '/usr/bin/process-media') ? '/etc/process-media.yaml' : 'process-media.yaml';
 }
@@ -66,7 +55,7 @@ my $conf = YAML::Tiny->read($config_file);
 
 if (scalar @objects == 0) {
     print "No files to process, Exiting...\n" if $OPTIONS{'batch'} eq 'false';
-    exit 0;
+    &clean_exit();
 } else {
     if ($OPTIONS{'batch'} eq 'false') {
         print "Found ".scalar @objects." files...\n";
@@ -80,7 +69,7 @@ if (scalar @objects == 0) {
         }
         ReadMode 0;
 
-        exit 0 if $key ne 'y';
+        &clean_exit() if $key ne 'y';
     }
 }
 
@@ -112,13 +101,16 @@ $queue_todo->end;
 # waiting for threads to finish
 $_->join for @threads;
 
-exit 0;
+&clean_exit();
 
 ## FUNCTIONS
 
 sub thread {
 
-    local $SIG{'INT'} = sub { threads->exit(); };
+    local $SIG{'INT'} = sub {
+        local $SIG{'INT'} = 'IGNORE';
+        threads->exit();
+    };
 
     while (my $obj = $queue_todo->dequeue) {
         if ($run == 1) {
@@ -138,15 +130,41 @@ sub thread {
     return 1;
 }
 
+sub parse_cmdline {
+
+    my $params_ref = shift;
+
+    GetOptions(
+        'type=s'        => \$params_ref->{'type'},
+        'format=s'      => \$params_ref->{'format'},
+        'config=s'      => \$params_ref->{'config'},
+        'max_threads=i' => \$params_ref->{'max_threads'},
+        'batch'         => \$params_ref->{'batch'},
+        'keep_name'     => \$params_ref->{'keep_name'},
+        'verbose'       => \$params_ref->{'verbose'},
+        'overwrite'     => \$params_ref->{'overwrite'},
+        'help'          => \$params_ref->{'help'},
+    ) or &clean_exit("Error in command line arguments");
+
+    return 1;
+}
+
 sub sig_handler {
     my $signame = shift;
 
-    # send SIGINT to all running threads and detach it
+    local $SIG{'INT'} = 'IGNORE';
+
+    # send SIGINT to all running threads,
+    # now we are waiting for threads to finish properly
+    # instead of detaching it because it can lead to several residual temp file 
     foreach my $thr (threads->list) {
-        $thr->kill('INT')->detach();
+        $thr->kill('INT')->join();
     }
 
-    die "Received a SIG$signame, Exiting...\n";
+    # ffmpeg messes up terminal, this is a workaround
+    system('stty sane');
+
+    &clean_exit("Received a SIG$signame, Exiting...");
 }
 
 sub set_options {
@@ -154,30 +172,30 @@ sub set_options {
     $path = $ARGV[0] // './';
 
     # max_threads
-    if (defined $opts->{'max_threads'}) {
-        $OPTIONS{'max_threads'} = ($opts->{'max_threads'} == 0) ? Sys::CPU::cpu_count() : $opts->{'max_threads'};
+    if (defined $params{'max_threads'}) {
+        $OPTIONS{'max_threads'} = ($params{'max_threads'} == 0) ? Sys::CPU::cpu_count() : $params{'max_threads'};
     } else {
         $OPTIONS{'max_threads'} = ($conf->[0]->{'max_threads'} == 0) ? Sys::CPU::cpu_count() : $conf->[0]->{'max_threads'};
     }
 
     # verbose
-    $OPTIONS{'verbose'} = $opts->{'verbose'} ? 'true' : $conf->[0]->{'verbose'};
+    $OPTIONS{'verbose'} = $params{'verbose'} ? 'true' : $conf->[0]->{'verbose'};
     
     # overwrite
-    $OPTIONS{'overwrite'} = $opts->{'overwrite'} ? 'true' : $conf->[0]->{'overwrite'};
+    $OPTIONS{'overwrite'} = $params{'overwrite'} ? 'true' : $conf->[0]->{'overwrite'};
 
     # keep_name
-    $OPTIONS{'keep_name'} = $opts->{'keep_name'} ? 'true' : $conf->[0]->{'keep_name'};
+    $OPTIONS{'keep_name'} = $params{'keep_name'} ? 'true' : $conf->[0]->{'keep_name'};
 
     # batch
-    $OPTIONS{'batch'} = $opts->{'batch'} ? 'true' : 'false';
+    $OPTIONS{'batch'} = $params{'batch'} ? 'true' : 'false';
 
-    $OPTIONS{'type'} = $opts->{'type'} // '';
+    $OPTIONS{'type'} = $params{'type'} // '';
 
-    if (not defined $opts->{'type'}) {
-        if (defined $opts->{'format'}) {
+    if (not defined $params{'type'}) {
+        if (defined $params{'format'}) {
             my %t;
-            foreach (split(',', $opts->{'format'})) {
+            foreach (split(',', $params{'format'})) {
                 $t{$conf->[1]->{$_}->{'type'}} = 1;
             }
             $OPTIONS{'type'} = join(',', keys %t);
@@ -190,8 +208,8 @@ sub set_options {
         }
     }
 
-	if (defined $opts->{'format'}) {
-        foreach my $fname (split(',', $opts->{'format'})) {
+	if (defined $params{'format'}) {
+        foreach my $fname (split(',', $params{'format'})) {
 			foreach my $t (split(',', $OPTIONS{'type'})) {
 				$OPTIONS{'format'}{$fname} = $conf->[1]->{$fname}
 					if $conf->[1]->{$fname}->{'type'} eq $t;
@@ -206,7 +224,7 @@ sub set_options {
 		}
 	}
 
-    die "No format found with your type and format combination\n"
+    &clean_exit("No format found with your type and format combination")
         if not exists $OPTIONS{'format'};
 
 	return 1;
@@ -223,15 +241,15 @@ sub check_conf {
 
     # options
     foreach (keys %{ $conf->[0] }) {
-        die "Unknown option '$_' in config file\n"
+        &clean_exit("Unknown option '$_' in config file")
             if not exists $o{$_};
 
-        die "Bad value '$conf->[0]->{$_}' for option '$_' in config file\n"
+        &clean_exit("Bad value '$conf->[0]->{$_}' for option '$_' in config file")
             if $conf->[0]->{$_} !~ /$o{$_}/;
     }
 
     foreach (keys %o) {
-        die "Miss option '$_' in config file\n" if not defined $conf->[0]->{$_};
+        &clean_exit("Miss option '$_' in config file") if not defined $conf->[0]->{$_};
     }
 
     my %f = (
@@ -250,16 +268,16 @@ sub check_conf {
 
     # format
     foreach my $fname (keys %{ $conf->[1] }) {
-        die "Bad format name '$fname' in config file" if $fname !~ /^[\w-]+$/;
+        &clean_exit("Bad format name '$fname' in config file") if $fname !~ /^[\w-]+$/;
 
         foreach (keys %{ $conf->[1]->{$fname} }) {
-            die "Unknown option '$_' in format '$fname' in config file\n"
+            &clean_exit("Unknown option '$_' in format '$fname' in config file")
                 if not exists $f{$_};
-            die "Bad value '$conf->[1]->{$fname}->{$_}' for option '$_' in format '$fname' in config file"
+            &clean_exit("Bad value '$conf->[1]->{$fname}->{$_}' for option '$_' in format '$fname' in config file")
                 if $conf->[1]->{$fname}->{$_} !~ /$f{$_}/;
         }
 
-        die "No type defined for format '$fname' in config file\n"
+        &clean_exit("No type defined for format '$fname' in config file")
             if not defined $conf->[1]->{$fname}->{'type'};
     }
 
@@ -268,29 +286,29 @@ sub check_conf {
 
 sub check_params {
 
-    &usage() if $opts->{'help'};
+    &usage() if $params{'help'};
 
     # type
-    if (defined $opts->{'type'}) {
-        foreach (split(',', $opts->{'type'})) {
-            die "Bad type of files to process: $_, see help (-h) for supported type\n"
+    if (defined $params{'type'}) {
+        foreach (split(',', $params{'type'})) {
+            &clean_exit("Bad type of files to process: $_, see help (-h) for supported type")
                 if !/^(?:photo|video)$/;
             my $found = 0;
             foreach my $k (keys %{ $conf->[1] }) {
                 $found = 1 if $conf->[1]->{$k}->{'type'} eq $_;
             }
-            die "No format found with type '$_'\n" if not $found;
+            &clean_exit("No format found with type '$_'") if not $found;
         }
     }
 
     # format
-    if (defined $opts->{'format'}) {
-        foreach (split(',', $opts->{'format'})) {
-            die "Unknown format '$_'\n" if not defined $conf->[1]->{$_};
+    if (defined $params{'format'}) {
+        foreach (split(',', $params{'format'})) {
+            &clean_exit("Unknown format '$_'") if not defined $conf->[1]->{$_};
         }
     }
 
-    die "Incorrect parameters, see help (-h) for correct syntax\n" if @ARGV > 1;
+    &clean_exit("Incorrect parameters, see help (-h) for correct syntax") if @ARGV > 1;
 
     return 1;
 }
@@ -304,7 +322,7 @@ sub get_files {
     }
     elsif (-d $path) {
         $path .= '/' unless $path =~ /\/$/;
-        opendir my $dh, $path or die "Failed to read directory \'$path\': $!\n";
+        opendir my $dh, $path or &clean_exit("Failed to read directory \'$path\': $!");
         foreach (sort grep { -f ($path.$_) && !/^\./ } readdir $dh) {
             push @files, $path.$_;
         }
@@ -340,19 +358,36 @@ sub get_objects {
     return 1;
 }
 
+sub clean_exit {
+    chomp (my $msg = shift);
+
+    local $SIG{'INT'} = 'DEFAULT';
+
+    if (defined $msg) {
+        die "$msg\n";
+    } else {
+        exit 0;
+    }
+}
+
 sub usage {
     print << "EOF";
-Usage: $0 [options...] <path>
+
+Usage: $0 [options] <path>
+
+<path> is the path to photos or videos to process
+
 Options:
--t,--type\t\t{photo,video}\tType of files to process (default: photo,video)
--f,--format\t\t{format1,...}\tFormat to generate (default: all format defined in config file)
--c,--config\t\t<config_file>\tConfig file to load (default: search process-media.yaml in /etc or local)
--m,--max_threads\t<num_threads>\tMaximum allowed threads (default: number of cpu(s)/core(s))
--k,--keep_name\t\t\t\tDo not rename file
--v,--verbose\t\t\t\tVerbose output
--o,--overwrite\t\t\t\tOverwrite existing files
--b,--batch\t\t\t\tRun in non-interactive mode, allowing to run in a crontab
--h,--help\t\t\t\tThis help text
+-t,--type        {photo,video} Type of files to process (default: photo,video)
+-f,--format      {format1,...} Format to generate (default: all format defined in config file)
+-c,--config      <config_file> Config file to load (default: search local process-media.yaml file or in /etc)
+-m,--max_threads <num_threads> Maximum allowed threads (default: number of cpu(s)/core(s))
+-k,--keep_name                 Do not rename file
+-v,--verbose                   Verbose output
+-o,--overwrite                 Overwrite existing files
+-b,--batch                     Run in non-interactive mode, allowing to run in a crontab
+-h,--help                      This help text
+
 EOF
     exit 0;
 }
