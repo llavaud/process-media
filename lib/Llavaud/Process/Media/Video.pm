@@ -155,7 +155,7 @@ sub process {
 
 		print "[$obj->{'final'}->{$_}->{'path'}] Processing...\n" if $main::OPTIONS{'verbose'} eq 'true';
 
-        my $tmp_file = File::Temp->new(DIR => $obj->{'final'}->{$_}->{'dir'});
+        my $tmp_file = File::Temp->new('process-media_tmp.XXXXXXXXXXXXX', DIR => $obj->{'final'}->{$_}->{'dir'});
 
         my $cmd = "$ffmpeg -nostdin -hide_banner -y";
 
@@ -249,7 +249,7 @@ sub strip {
 
         # dump metadata
         if (defined $main::OPTIONS{'format'}{$_}{'strip_exclude'}) {
-            $tmp_data = File::Temp->new(DIR => $obj->{'final'}->{$_}->{'dir'});
+            $tmp_data = File::Temp->new('process-media_tmp.XXXXXXXXXXXXX', DIR => $obj->{'final'}->{$_}->{'dir'});
             my $cmd = "$ffmpeg -nostdin -hide_banner -y";
             $cmd .= ($main::OPTIONS{'verbose'} eq 'true') ? " -loglevel warning" : " -loglevel error";
             $cmd .= " -i $obj->{'final'}->{$_}->{'path'}";
@@ -258,7 +258,7 @@ sub strip {
             &edit_metadata($tmp_data);
         }
 
-        my $tmp_video = File::Temp->new(DIR => $obj->{'final'}->{$_}->{'dir'});
+        my $tmp_video = File::Temp->new('process-media_tmp.XXXXXXXXXXXXX', DIR => $obj->{'final'}->{$_}->{'dir'});
 
         # strip all metadata
         my $cmd = "$ffmpeg -nostdin -hide_banner -y";
@@ -272,7 +272,7 @@ sub strip {
 
         # import wanted metadata
         if (defined $main::OPTIONS{'format'}{$_}{'strip_exclude'}) {
-            my $tmp_video2 = File::Temp->new(DIR => $obj->{'final'}->{$_}->{'dir'});
+            my $tmp_video2 = File::Temp->new('process-media_tmp.XXXXXXXXXXXXX', DIR => $obj->{'final'}->{$_}->{'dir'});
             my $cmd2 = "$ffmpeg -nostdin -hide_banner -y";
             $cmd2 .= ($main::OPTIONS{'verbose'} eq 'true') ? " -loglevel warning" : " -loglevel error";
             $cmd2 .= " -i $obj->{'final'}->{$_}->{'path'}";
