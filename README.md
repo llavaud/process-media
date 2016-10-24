@@ -71,11 +71,14 @@ The resulting photo(s) will be auto-rotated, resized, compressed and all metadat
 ## CLI
 
 ```
-Usage: ./process-media [options...] <path>
+Usage: ./process-media <path> [options]
+
+<path> is the path to photos or videos to process
+
 Options:
 -t,--type        {photo,video}  Type of files to process (default: photo,video)
 -f,--format      {format1,...}  Format to generate (default: all format defined in config file)
--c,--config      <config_file>  Config file to load (default: search process-media.yaml in /etc or local)
+-c,--config      <config_file>  Config file to load (default: search local process-media.yaml file or in /etc)
 -m,--max_threads <num_threads>  Maximum allowed threads (default: number of cpu(s)/core(s))
 -k,--keep_name                  Do not rename file
 -v,--verbose                    Verbose output
