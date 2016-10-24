@@ -140,17 +140,17 @@ sub process {
 
 	lock $obj;
 
-	foreach (keys %{ $main::OPTIONS{'format'} }) {
-		next if $main::OPTIONS{'format'}{$_}{'type'} ne 'photo';
-		next if defined $obj->{'final'}->{$_}->{'exist'} and $main::OPTIONS{'overwrite'} eq 'false';
+    foreach (keys %{ $main::OPTIONS{'format'} }) {
+        next if $main::OPTIONS{'format'}{$_}{'type'} ne 'photo';
+        next if defined $obj->{'final'}->{$_}->{'exist'} and $main::OPTIONS{'overwrite'} eq 'false';
 
-		print "[$obj->{'final'}->{$_}->{'path'}] Processing...\n" if $main::OPTIONS{'verbose'} eq 'true';
+        print "[$obj->{'final'}->{$_}->{'path'}] Processing...\n" if $main::OPTIONS{'verbose'} eq 'true';
 
-		my $image = Image::Magick->new();
-		if (my $err = $image->Read($obj->{'original'}->{'path'})){
-			carp "[$obj->{'final'}->{$_}->{'path'}] Failed to read, $err";
-			return 0;
-		}
+        my $image = Image::Magick->new();
+        if (my $err = $image->Read($obj->{'original'}->{'path'})){
+            carp "[$obj->{'final'}->{$_}->{'path'}] Failed to read, $err";
+            return 0;
+        }
         if (defined $main::OPTIONS{'format'}{$_}{'rotate'}) {
             my $err;
             if ($main::OPTIONS{'format'}{$_}{'rotate'} eq 'auto') {
@@ -164,23 +164,23 @@ sub process {
                 return 0;
             }
         }
-		# resize image to get the larger side to 1920 (only if it is larger than 1920) and preserve aspect ratio
-		if (defined $main::OPTIONS{'format'}{$_}{'resize'} and
-			my $err = $image->Resize("$main::OPTIONS{'format'}{$_}{'resize'}x$main::OPTIONS{'format'}{$_}{'resize'}>")){
-			carp "[$obj->{'final'}->{$_}->{'path'}] Failed to resize, $err";
-			return 0;
-		}
-		my $err;
-		if (defined $main::OPTIONS{'format'}{$_}{'compress'}) {
-			$err = $image->Write(filename => $obj->{'final'}->{$_}->{'path'}, quality => $main::OPTIONS{'format'}{$_}{'compress'});
-		} else {
-			$err = $image->Write(filename => $obj->{'final'}->{$_}->{'path'});
-		}
-		if ($err) {
-			carp "[$obj->{'final'}->{$_}->{'path'}] Failed to write, $err";
-			return 0;
-		}
-	}
+        # resize image to get the larger side to 1920 (only if it is larger than 1920) and preserve aspect ratio
+        if (defined $main::OPTIONS{'format'}{$_}{'resize'} and
+            my $err = $image->Resize("$main::OPTIONS{'format'}{$_}{'resize'}x$main::OPTIONS{'format'}{$_}{'resize'}>")){
+            carp "[$obj->{'final'}->{$_}->{'path'}] Failed to resize, $err";
+            return 0;
+        }
+        my $err;
+        if (defined $main::OPTIONS{'format'}{$_}{'compress'}) {
+            $err = $image->Write(filename => $obj->{'final'}->{$_}->{'path'}, quality => $main::OPTIONS{'format'}{$_}{'compress'});
+        } else {
+            $err = $image->Write(filename => $obj->{'final'}->{$_}->{'path'});
+        }
+        if ($err) {
+            carp "[$obj->{'final'}->{$_}->{'path'}] Failed to write, $err";
+            return 0;
+        }
+    }
 
 	return 1;
 }
@@ -190,54 +190,54 @@ sub strip {
 
 	lock $obj;
 
-	foreach my $fname (keys %{ $main::OPTIONS{'format'} }) {
-		next if $main::OPTIONS{'format'}{$fname}{'type'} ne 'photo';
-		next if not defined $main::OPTIONS{'format'}{$fname}{'strip'} or
-		$main::OPTIONS{'format'}{$fname}{'strip'} eq 'false';
-		next if defined $obj->{'final'}->{$fname}->{'exist'} and $main::OPTIONS{'overwrite'} eq 'false';
+    foreach my $fname (keys %{ $main::OPTIONS{'format'} }) {
+        next if $main::OPTIONS{'format'}{$fname}{'type'} ne 'photo';
+        next if not defined $main::OPTIONS{'format'}{$fname}{'strip'} or
+        $main::OPTIONS{'format'}{$fname}{'strip'} eq 'false';
+        next if defined $obj->{'final'}->{$fname}->{'exist'} and $main::OPTIONS{'overwrite'} eq 'false';
 
-		print "[$obj->{'final'}->{$fname}->{'path'}] Stripping...\n" if $main::OPTIONS{'verbose'} eq 'true';
+        print "[$obj->{'final'}->{$fname}->{'path'}] Stripping...\n" if $main::OPTIONS{'verbose'} eq 'true';
 
-		# remove all tags
-		my $exif = Image::ExifTool->new();
-		my ($ret, $err) = $exif->SetNewValue('*');
-		if (defined $err) {
-			carp "[$obj->{'final'}->{$fname}->{'path'}] Failed to remove tags, $err";
-			return 0;
-		}
+        # remove all tags
+        my $exif = Image::ExifTool->new();
+        my ($ret, $err) = $exif->SetNewValue('*');
+        if (defined $err) {
+            carp "[$obj->{'final'}->{$fname}->{'path'}] Failed to remove tags, $err";
+            return 0;
+        }
 
-		if (defined $main::OPTIONS{'format'}{$fname}{'strip_exclude'}) {
+        if (defined $main::OPTIONS{'format'}{$fname}{'strip_exclude'}) {
 
-			foreach (split(',', $main::OPTIONS{'format'}{$fname}{'strip_exclude'})) {
+            foreach (split(',', $main::OPTIONS{'format'}{$fname}{'strip_exclude'})) {
 
-				if ($_ eq 'gps') {
+                if ($_ eq 'gps') {
 
-					# keep GPS tags if asked
-					$ret = $exif->SetNewValuesFromFile($obj->{'final'}->{$fname}->{'path'}, 'gps:all');
-					if (defined $ret->{'Error'}) {
-						carp "[$obj->{'final'}->{$fname}->{'path'}] Failed to retrieve tag orientation, $ret->{'Error'}";
-						return 0;
-					}
-				}
-				elsif ($_ eq 'orientation') {
+                    # keep GPS tags if asked
+                    $ret = $exif->SetNewValuesFromFile($obj->{'final'}->{$fname}->{'path'}, 'gps:all');
+                    if (defined $ret->{'Error'}) {
+                        carp "[$obj->{'final'}->{$fname}->{'path'}] Failed to retrieve tag orientation, $ret->{'Error'}";
+                        return 0;
+                    }
+                }
+                elsif ($_ eq 'orientation') {
 
-					# keep Orientation tag
-					$ret = $exif->SetNewValuesFromFile($obj->{'final'}->{$fname}->{'path'}, 'EXIF:Orientation');
-					if (defined $ret->{'Error'}) {
-						carp "[$obj->{'final'}->{$fname}->{'path'}] Failed to retrieve tag orientation, $ret->{'Error'}";
-						return 0;
-					}
-				}
-			}
-		}
+                    # keep Orientation tag
+                    $ret = $exif->SetNewValuesFromFile($obj->{'final'}->{$fname}->{'path'}, 'EXIF:Orientation');
+                    if (defined $ret->{'Error'}) {
+                        carp "[$obj->{'final'}->{$fname}->{'path'}] Failed to retrieve tag orientation, $ret->{'Error'}";
+                        return 0;
+                    }
+                }
+            }
+        }
 
-		unless ($exif->WriteInfo($obj->{'final'}->{$fname}->{'path'})) {
-			carp "[$obj->{'final'}->{$fname}->{'path'}] Failed to write, ".$exif->GetValue('Error');
-			return 0;
-		}
-	}
+        unless ($exif->WriteInfo($obj->{'final'}->{$fname}->{'path'})) {
+            carp "[$obj->{'final'}->{$fname}->{'path'}] Failed to write, ".$exif->GetValue('Error');
+            return 0;
+        }
+    }
 
-	return 1;
+    return 1;
 }
 
 sub integrity {
