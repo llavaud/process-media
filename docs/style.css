@@ -36,3 +36,9 @@ h2 {
 ul {
     list-style-type: square;
 }
+
+.code {
+    font-size: 90%;
+    line-height: 150%;
+    font-style: italic;
+}
