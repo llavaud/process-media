@@ -38,7 +38,7 @@ ul {
 }
 
 .code {
-    font-size: 90%;
+    font-size: 75%;
     line-height: 150%;
-    font-style: italic;
+    font-family: sans-serif;
 }
