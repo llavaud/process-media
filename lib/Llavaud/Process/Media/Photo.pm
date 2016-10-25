@@ -1,5 +1,7 @@
 package Llavaud::Process::Media::Photo;
 
+use 5.010;
+
 use strict;
 use warnings;
 
@@ -11,6 +13,8 @@ use Image::ExifTool qw/ImageInfo/;
 use Image::Magick;
 use threads::shared;
 use Time::Piece;
+
+local $SIG{'CHLD'} = 'IGNORE';
 
 sub new {
     my $class = shift;

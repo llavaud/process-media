@@ -52,6 +52,7 @@ web_photo:
 
 archive_video:
   type: 'video'
+  rotate: 'auto'
 
   # specify that we want to reencode the video in order to reduce the file size
   reencode: true
@@ -64,13 +65,12 @@ archive_video:
   # see "x264 --help" or "x265 --help" for available options
   #vcodec_params: 'crf=20'
 
-  rotate: 'auto'
   output_dir: 'archive/videos'
 
 web_video:
   type: 'video'
-  reencode: true
   rotate: 'auto'
+  reencode: true
   resize: 1024
   strip: true
 
