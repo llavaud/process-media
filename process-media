@@ -258,6 +258,7 @@ sub check_conf {
         'compress'      => '^(?:100|[1-9]?[0-9])$',
         'strip'         => '^(?:true|false)$',
         'strip_exclude' => '^(?:orientation|gps|,)+$',
+        'progressive'   => '^(?:true|false)$',
         'resize'        => '^\d+$',
         'vcodec'        => '^x26[45]$',
         'vcodec_params' => '^[\w\:\=]+$',

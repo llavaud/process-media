@@ -174,6 +174,12 @@ sub process {
             carp "[$obj->{'final'}->{$_}->{'path'}] Failed to resize, $err";
             return 0;
         }
+        if (defined $main::OPTIONS{'format'}{$_}{'progressive'} and
+            $main::OPTIONS{'format'}{$_}{'progressive'} eq 'true' and
+            my $err = $image->Set(interlace => 'Plane')) {
+            carp "[$obj->{'final'}->{$_}->{'path'}] Failed to set interlace, $err";
+            return 0;
+        }
         my $err;
         if (defined $main::OPTIONS{'format'}{$_}{'compress'}) {
             $err = $image->Write(filename => $obj->{'final'}->{$_}->{'path'}, quality => $main::OPTIONS{'format'}{$_}{'compress'});

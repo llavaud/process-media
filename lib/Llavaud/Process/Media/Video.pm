@@ -311,7 +311,7 @@ sub thumbnail {
             carp "[$obj->{'final'}->{$_}->{'dir'}$obj->{'final'}->{'name'}.jpg] Failed to strip, $err";
             return 0;
         }
-        if (my $err = $image->Write(filename => "$obj->{'final'}->{$_}->{'dir'}$obj->{'final'}->{'name'}.jpg", quality => 90)) {
+        if (my $err = $image->Write(filename => "$obj->{'final'}->{$_}->{'dir'}$obj->{'final'}->{'name'}.jpg", interlace => 'Plane', quality => 90)) {
             carp "[$obj->{'final'}->{$_}->{'dir'}$obj->{'final'}->{'name'}.jpg] Failed to write, $err";
             return 0;
         }

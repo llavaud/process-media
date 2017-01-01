@@ -41,6 +41,9 @@ web_photo:
   # a low value result in a better compression but in a lower quality
   compress: 90
 
+  # create a progressive jpeg
+  progressive: true
+
   # if set to true, all metadata will be removed except ones specified by strip_exclude
   strip: true
 
