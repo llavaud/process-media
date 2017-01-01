@@ -59,6 +59,7 @@ web_photo:
   rotate: 'auto'
   resize: 1920
   compress: 90
+  progressive: true
   strip: true
   strip_exclude: 'gps'
   output_dir: 'web'
@@ -66,7 +67,7 @@ web_photo:
 
 Here we define a photo format named **web_photo**.
 
-The resulting photo(s) will be auto-rotated, resized, compressed and all metadata will be removed except GPS informations.
+The resulting photo(s) will be auto-rotated, resized, compressed, progressive jpeg enabled and all metadata will be removed except GPS informations.
 
 ## CLI
 
