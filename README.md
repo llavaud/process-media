@@ -13,6 +13,7 @@ This script will process (resize, compress...) photos and videos according to th
 ## Installation
 
 <a name="package"/>
+
 ### Package (favourite)
 
 I have setup a **Debian/Ubuntu** apt repository to distribute this package
