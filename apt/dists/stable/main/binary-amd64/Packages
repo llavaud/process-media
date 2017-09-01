@@ -1,17 +1,17 @@
 Package: process-media
-Version: 1.2
+Version: 1.3
 Architecture: all
 Maintainer: Laurent Lavaud <l.lavaud@gmail.com>
-Installed-Size: 87854
+Installed-Size: 87855
 Depends: perl (>= 5.10), jpeginfo, libimage-exiftool-perl, libimage-magick-perl, libmime-types-perl, libsys-cpu-perl, libterm-readkey-perl, libyaml-tiny-perl
 Homepage: https://llavaud.github.io/process-media
 Priority: optional
 Section: graphics
-Filename: pool/main/p/process-media/process-media_1.2_all.deb
-Size: 22688594
-SHA256: c6db39bc9b30ca0b9f9ef876ca89f8db109083c3441bbf28e0f4209f80c45f56
-SHA1: 69d9d2b8bc63c4a00ee3f56f36a2057a5a552593
-MD5sum: 183a80490371ab85a7a2f90020ff5c7d
+Filename: pool/main/p/process-media/process-media_1.3_all.deb
+Size: 22845666
+SHA256: c6ea0932b8dfe78c0b29d0617e3de28f5e290e594e7af01b5275751890c9967d
+SHA1: 0ddd4bf6ead90ab24660af255af74f06942b9129
+MD5sum: 288a37956f2f25efab5e878f43bb4fea
 Description: A photo and video processing script
  This script will process (resize, compress...) photos and videos according to the specified options.
 
