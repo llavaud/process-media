@@ -31,6 +31,7 @@ my @threads;
 my @objects;
 my %params;
 our %OPTIONS;
+my $errors :shared = 0;
 
 ## MAIN
 
@@ -101,6 +102,8 @@ $queue_todo->end;
 # waiting for threads to finish
 $_->join for @threads;
 
+print "Finished with $errors errors\n" if $OPTIONS{'verbose'} eq 'true' or $errors > 0;
+
 &clean_exit();
 
 ## FUNCTIONS
@@ -114,16 +117,18 @@ sub thread {
 
     while (my $obj = $queue_todo->dequeue) {
         if ($run == 1) {
-            $obj->get_name();
+            $errors++ unless $obj->get_name();
             $queue_done->enqueue($obj)
         }
         elsif ($run == 2) {
-            $obj->exist();
-            $obj->create();
-            $obj->process();
-            $obj->strip();
-            $obj->thumbnail() if ref($obj) eq 'Llavaud::Process::Media::Video';
-            $obj->integrity();
+            $errors++ unless $obj->exist();
+            $errors++ unless $obj->create();
+            $errors++ unless $obj->process();
+            $errors++ unless $obj->strip();
+            if (ref($obj) eq 'Llavaud::Process::Media::Video') {
+                $errors++ unless $obj->thumbnail();
+            }
+            $errors++ unless $obj->integrity();
         }
     }
 

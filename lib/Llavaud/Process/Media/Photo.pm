@@ -133,7 +133,14 @@ sub create {
         print "[$obj->{'final'}->{$_}->{'path'}] Creating...\n" if $main::OPTIONS{'verbose'} eq 'true';
 
         make_path $obj->{'final'}->{$_}->{'dir'} if not -d $obj->{'final'}->{$_}->{'dir'};
-        copy("$obj->{'original'}->{'path'}", "$obj->{'final'}->{$_}->{'path'}");
+        my $image = Image::Magick->new();
+        if (my $err = $image->Read($obj->{'original'}->{'path'})) {
+            carp "[$obj->{'original'}->{'path'}] Failed to read, $err";
+            return 0;
+        }
+        if (my $err = $image->Write(filename => $obj->{'final'}->{$_}->{'path'})) {;
+            print "[$obj->{'final'}->{$_}->{'path'}] Warnings/Errors when creating initial file, $err\n" if $main::OPTIONS{'verbose'} eq 'true';
+        }
     }
 
     return 1;
@@ -151,7 +158,7 @@ sub process {
         print "[$obj->{'final'}->{$_}->{'path'}] Processing...\n" if $main::OPTIONS{'verbose'} eq 'true';
 
         my $image = Image::Magick->new();
-        if (my $err = $image->Read($obj->{'original'}->{'path'})){
+        if (my $err = $image->Read($obj->{'final'}->{$_}->{'path'})){
             carp "[$obj->{'final'}->{$_}->{'path'}] Failed to read, $err";
             return 0;
         }
