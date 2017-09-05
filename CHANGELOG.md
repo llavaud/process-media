@@ -1,3 +1,10 @@
+## 1.4 (2017-09-05)
+
+IMPROVEMENTS:
+* improved signal handling with threads
+
+BUG FIXES:
+
 ## 1.3 (2017-09-01)
 
 IMPROVEMENTS:
