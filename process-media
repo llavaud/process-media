@@ -21,13 +21,11 @@ use Llavaud::Process::Media::Photo;
 use Llavaud::Process::Media::Video;
 
 local $SIG{'INT'}  = \&sig_handler;
-local $SIG{'TERM'} = \&sig_handler;
 
 ## VARS
 
 my $config_file;
 my $path;
-my @threads;
 my @objects;
 my %params;
 our %OPTIONS;
@@ -82,7 +80,7 @@ $queue_todo->enqueue($_) for @objects;
 
 # start threads
 while ($OPTIONS{'max_threads'} >= 1) {
-    push @threads, threads->new(\&thread);
+    threads->new(\&thread);
     $OPTIONS{'max_threads'}--;
 }
 
@@ -100,7 +98,14 @@ $queue_todo->enqueue($_) for @objects;
 $queue_todo->end;
 
 # waiting for threads to finish
-$_->join for @threads;
+my $running_threads = scalar threads->list(threads::running);
+while ($running_threads) {
+    for my $thread (threads->list(threads::joinable)) {
+        $thread->join();
+        $running_threads--;
+    }
+    sleep 1;
+}
 
 print "Finished with $errors errors\n" if $OPTIONS{'verbose'} eq 'true' or $errors > 0;
 
@@ -110,10 +115,7 @@ print "Finished with $errors errors\n" if $OPTIONS{'verbose'} eq 'true' or $erro
 
 sub thread {
 
-    local $SIG{'INT'} = sub {
-        local $SIG{'INT'} = 'IGNORE';
-        threads->exit();
-    };
+    local $SIG{'INT'} = sub { threads->exit(); };
 
     while (my $obj = $queue_todo->dequeue) {
         if ($run == 1) {
@@ -159,6 +161,8 @@ sub sig_handler {
 
     local $SIG{'INT'} = 'IGNORE';
 
+    print "Received SIG$signame, Exiting...";
+
     # send SIGINT to all running threads,
     # now we are waiting for threads to finish properly
     # instead of detaching it because it can lead to several residual temp file 
@@ -169,7 +173,7 @@ sub sig_handler {
     # ffmpeg messes up terminal, this is a workaround
     system('stty sane');
 
-    &clean_exit("Received a SIG$signame, Exiting...");
+    &clean_exit();
 }
 
 sub set_options {
