@@ -1,3 +1,9 @@
+process-media (1.4) stable; urgency=medium
+
+  * improved signal handling with threads
+
+ -- Laurent Lavaud <l.lavaud@gmail.com>  Tue, 05 Sep 2017 15:23:37 +0200
+
 process-media (1.3) stable; urgency=medium
 
   * handle errors more efficiently 

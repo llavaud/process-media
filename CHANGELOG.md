@@ -1,3 +1,12 @@
+## 1.3 (2017-09-01)
+
+IMPROVEMENTS:
+* handle errors more efficiently
+* Update README.md
+* update README
+
+BUG FIXES:
+
 ## 1.2 (2017-01-01)
 
 IMPROVEMENTS:
