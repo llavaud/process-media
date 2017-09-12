@@ -1,3 +1,10 @@
+## 1.5 (2017-09-12)
+
+IMPROVEMENTS:
+
+BUG FIXES:
+* correcting a bug with threads management
+
 ## 1.4 (2017-09-05)
 
 IMPROVEMENTS:
