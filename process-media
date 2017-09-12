@@ -98,7 +98,7 @@ $queue_todo->enqueue($_) for @objects;
 $queue_todo->end;
 
 # waiting for threads to finish
-my $running_threads = scalar threads->list(threads::running);
+my $running_threads = scalar threads->list();
 while ($running_threads) {
     for my $thread (threads->list(threads::joinable)) {
         $thread->join();
