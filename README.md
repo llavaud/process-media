@@ -5,6 +5,7 @@ This script will process (resize, compress...) photos and videos according to th
 ## Table of contents
 * [Installation](#installation)
   * [Package (favourite)](#package)
+  * [Docker](#docker)
   * [Archive](#archive)
 * [Configuration](#configuration)
 * [CLI](#cli)
@@ -32,6 +33,10 @@ And then install the package:
 sudo apt-get update
 sudo apt-get install process-media
 ```
+
+### Docker
+
+A Docker image with the latest release is available, go to the [Docker Hub image page](https://hub.docker.com/r/llavaud/process-media/ "Docker Hub image page") to get instructions
 
 ### Archive
 
