@@ -1,10 +1,10 @@
 FROM ubuntu:rolling
 
-ENV DEBIAN_FRONTEND=noninteractive
-
 COPY . /usr/src/process-media
 
 WORKDIR /usr/src/process-media
+
+ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && apt-get install -y \
  perl \
