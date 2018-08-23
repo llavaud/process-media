@@ -2,13 +2,18 @@ FROM ubuntu:rolling
 
 ENV DEBIAN_FRONTEND=noninteractive
 
+COPY . /usr/src/process-media
+
+WORKDIR /usr/src/process-media
+
 RUN apt-get update && apt-get install -y \
- software-properties-common \
- wget \
- gpg
+ perl \
+ jpeginfo \
+ libimage-exiftool-perl \
+ libimage-magick-perl \
+ libmime-types-perl \
+ libsys-cpu-perl \
+ libterm-readkey-perl \
+ libyaml-tiny-perl
 
-RUN ["/bin/bash", "-c", "set -o pipefail && wget -O - https://llavaud.github.io/process-media/apt/conf/gpg.key | apt-key add -"]
-RUN apt-add-repository 'deb https://llavaud.github.io/process-media/apt stable main'
-RUN apt-get install -y process-media
-
-ENTRYPOINT ["/usr/bin/process-media", "/media"]
+ENTRYPOINT ["/usr/src/process-media/process-media", "/media"]
