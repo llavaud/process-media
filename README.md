@@ -87,6 +87,7 @@ Options:
 -f,--format      {format1,...}  Format to generate (default: all format defined in config file)
 -c,--config      <config_file>  Config file to load (default: search local process-media.yaml file or in /etc)
 -m,--max_threads <num_threads>  Maximum allowed threads (default: number of cpu(s)/core(s))
+-tz,--tzoffset                  Allow to change the default timezone offset used to rename file(s) (in seconds)
 -k,--keep_name                  Do not rename file
 -v,--verbose                    Verbose output
 -o,--overwrite                  Overwrite existing files
