@@ -146,6 +146,7 @@ sub parse_cmdline {
         'format=s'      => \$params_ref->{'format'},
         'config=s'      => \$params_ref->{'config'},
         'max_threads=i' => \$params_ref->{'max_threads'},
+        'tzoffset=i'    => \$params_ref->{'tzoffset'},
         'batch'         => \$params_ref->{'batch'},
         'keep_name'     => \$params_ref->{'keep_name'},
         'verbose'       => \$params_ref->{'verbose'},
@@ -186,6 +187,9 @@ sub set_options {
     } else {
         $OPTIONS{'max_threads'} = ($conf->[0]->{'max_threads'} == 0) ? Sys::CPU::cpu_count() : $conf->[0]->{'max_threads'};
     }
+
+    # tzoffset
+    $OPTIONS{'tzoffset'} = $params{'tzoffset'} ? $params{'tzoffset'} : $conf->[0]->{'tzoffset'};
 
     # verbose
     $OPTIONS{'verbose'} = $params{'verbose'} ? 'true' : $conf->[0]->{'verbose'};
@@ -243,6 +247,7 @@ sub check_conf {
 
     my %o = (
         'max_threads' => '^\d+$',
+        'tzoffset'    => '^(\-|\+)?\d+$',
         'keep_name'   => '^(?:true|false)$',
         'verbose'     => '^(?:true|false)$',
         'overwrite'   => '^(?:true|false)$',
@@ -393,6 +398,7 @@ Options:
 -f,--format      {format1,...}  Format to generate (default: all format defined in config file)
 -c,--config      <config_file>  Config file to load (default: search local process-media.yaml file or in /etc)
 -m,--max_threads <num_threads>  Maximum allowed threads (default: number of cpu(s)/core(s))
+-tz,--tzoffset                  Allow to change the default timezone offset used to rename file(s) (in seconds)
 -k,--keep_name                  Do not rename file
 -v,--verbose                    Verbose output
 -o,--overwrite                  Overwrite existing files

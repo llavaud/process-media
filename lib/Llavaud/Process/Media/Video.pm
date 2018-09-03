@@ -86,7 +86,12 @@ sub get_name {
             $obj->{'final'}->{'name'} = $obj->{'original'}->{'name'};
         } else {
             my $t = Time::Piece->strptime($info->{'CreateDate'}, "%Y:%m:%d %H:%M:%S");
-            $t += $t->localtime->tzoffset;
+            if ($main::OPTIONS{'tzoffset'} != 0) {
+                print "COUCOU: $main::OPTIONS{'tzoffset'}\n";
+                $t += $main::OPTIONS{'tzoffset'};
+            } else {
+                $t += $t->localtime->tzoffset;
+            }
             $obj->{'final'}->{'name'} = $t->ymd('').'-'.$t->hms('');
 
             print "[$obj->{'original'}->{'path'}] Renamed to \'$obj->{'final'}->{'name'}\'\n"

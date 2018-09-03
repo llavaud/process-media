@@ -13,6 +13,11 @@ keep_name: false
 # overwrite existing file(s)
 overwrite: false
 
+# allow to change the default timezone offset used to rename file(s)
+# by default use the current system timezone offset
+# must be specified in seconds (ex: +3600, -7200, etc...)
+tzoffset: 0
+
 ---
 
 # Format(s) to generate
