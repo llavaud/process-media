@@ -1,3 +1,12 @@
+## 1.6 (2018-09-03)
+
+IMPROVEMENTS:
+* Merge branch 'master' of github.com:llavaud/process-media
+* add a new option to control timezone offset used to rename file(s)
+* add a new option to control timezone offset used to rename file(s)
+
+BUG FIXES:
+
 ## 1.5 (2017-09-12)
 
 IMPROVEMENTS:
