@@ -21,4 +21,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
  libyaml-tiny-perl \
 && rm -rf /var/lib/apt/lists/*
 
+RUN ln -snf /usr/share/zoneinfo/Europe/Paris /etc/localtime && echo Europe/Paris > /etc/timezone
+
 ENTRYPOINT ["/usr/src/process-media/process-media", "--config", "/etc/process-media.yaml", "/media"]
