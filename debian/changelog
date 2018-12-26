@@ -1,3 +1,9 @@
+process-media (1.7) stable; urgency=medium
+
+  * fix a bug with the detection of mp4 video file
+
+ -- Laurent Lavaud <l.lavaud@gmail.com>  Wed, 26 Dec 2018 12:06:34 +0100
+
 process-media (1.6) stable; urgency=medium
 
   * add a new option to control timezone offset used to rename file(s)
