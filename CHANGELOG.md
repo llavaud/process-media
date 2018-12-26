@@ -1,3 +1,10 @@
+## 1.7 (2018-12-26)
+
+IMPROVEMENTS:
+
+BUG FIXES:
+* fix a bug with the detection of mp4 video file
+
 ## 1.6 (2018-09-03)
 
 IMPROVEMENTS:
