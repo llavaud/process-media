@@ -360,7 +360,7 @@ sub get_objects {
             next if $OPTIONS{'type'} !~ /photo/;
             $obj = Llavaud::Process::Media::Photo->new();
         }
-        elsif (defined $type and $type =~ /^video\//) {
+        elsif (defined $type and $type =~ /^(application\/mp4|video\/)/) {
             next if $OPTIONS{'type'} !~ /video/;
             $obj = Llavaud::Process::Media::Video->new();
         }
