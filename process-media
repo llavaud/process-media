@@ -5,9 +5,11 @@ use 5.010;
 use strict;
 use warnings;
 
+use File::Temp qw/tempdir/;
 use Getopt::Long qw/GetOptions/;
 use MIME::Types;
 use Sys::CPU qw/cpu_count/;
+use Term::ANSIColor;
 use Term::ReadKey qw/ReadKey ReadMode/;
 use threads;
 use threads::shared;
@@ -58,6 +60,9 @@ if (scalar @objects == 0) {
 } else {
     if ($OPTIONS{'batch'} eq 'false') {
         print "Found ".scalar @objects." files...\n";
+        if ($OPTIONS{'inplace'} eq 'true') {
+            print colored("[WARNING] You set option \"inplace\", original file will be overwrited !!!", 'bright_white on_red'), "\n";
+        }
         ReadMode 4;
         my $key = '';
         while($key !~ /^(?:y|n)$/) {
@@ -131,6 +136,9 @@ sub thread {
                 $errors++ unless $obj->thumbnail();
             }
             $errors++ unless $obj->integrity();
+            if ($OPTIONS{'inplace'} eq 'true') {
+                $errors++ unless $obj->inplace();
+            }
         }
     }
 
@@ -145,6 +153,7 @@ sub parse_cmdline {
         'type=s'        => \$params_ref->{'type'},
         'format=s'      => \$params_ref->{'format'},
         'config=s'      => \$params_ref->{'config'},
+        'inplace'       => \$params_ref->{'inplace'},
         'max_threads=i' => \$params_ref->{'max_threads'},
         'tzoffset=i'    => \$params_ref->{'tzoffset'},
         'batch'         => \$params_ref->{'batch'},
@@ -181,6 +190,9 @@ sub set_options {
 
     $path = $ARGV[0] // './';
 
+    # tmpdir
+    $OPTIONS{'tmpdir'} = File::Temp->newdir('process-media-XXXXXXXXXXXXX', DIR => $conf->[0]->{'tmpdir'})->dirname;
+
     # max_threads
     if (defined $params{'max_threads'}) {
         $OPTIONS{'max_threads'} = ($params{'max_threads'} == 0) ? Sys::CPU::cpu_count() : $params{'max_threads'};
@@ -196,6 +208,9 @@ sub set_options {
 
     # overwrite
     $OPTIONS{'overwrite'} = $params{'overwrite'} ? 'true' : $conf->[0]->{'overwrite'};
+
+    # inplace
+    $OPTIONS{'inplace'} = $params{'inplace'} ? 'true' : 'false';
 
     # keep_name
     $OPTIONS{'keep_name'} = $params{'keep_name'} ? 'true' : $conf->[0]->{'keep_name'};
@@ -251,6 +266,7 @@ sub check_conf {
         'keep_name'   => '^(?:true|false)$',
         'verbose'     => '^(?:true|false)$',
         'overwrite'   => '^(?:true|false)$',
+        'tmpdir'      => '^[\w\-\/\.]+$',
     );
 
     # options
@@ -321,6 +337,11 @@ sub check_params {
         foreach (split(',', $params{'format'})) {
             &clean_exit("Unknown format '$_'") if not defined $conf->[1]->{$_};
         }
+    }
+
+    # inplace
+    if (defined $params{'inplace'} and not defined $params{'format'}) {
+        &clean_exit("You must specify a format if you want to use the \"inplace\" option");
     }
 
     &clean_exit("Incorrect parameters, see help (-h) for correct syntax") if @ARGV > 1;
@@ -402,6 +423,7 @@ Options:
 -k,--keep_name                  Do not rename file
 -v,--verbose                    Verbose output
 -o,--overwrite                  Overwrite existing files
+-i,--inplace                    Replace original file instead of writing to output_dir (specifying a format is mandatory)
 -b,--batch                      Run in non-interactive mode, allowing to run in a crontab
 -h,--help                       This help text
 

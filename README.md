@@ -3,6 +3,7 @@
 This script will process (resize, compress...) photos and videos according to the specified options.
 
 ## Table of contents
+
 * [Installation](#installation)
   * [Package (favourite)](#package)
   * [Docker](#docker)
@@ -29,7 +30,7 @@ You must also retrieve and install my GPG key:
 
 And then install the package:
 
-```
+```bash
 sudo apt-get update
 sudo apt-get install process-media
 ```
@@ -59,7 +60,7 @@ First you need to define the different formats you want in the configuration fil
 
 Here is a photo format example:
 
-```
+```yaml
 web_photo:
   type: 'photo'
   rotate: 'auto'
@@ -77,7 +78,7 @@ The resulting photo(s) will be auto-rotated, resized, compressed, progressive jp
 
 ## CLI
 
-```
+```bash
 Usage: ./process-media <path> [options]
 
 <path> is the path to photos or videos to process

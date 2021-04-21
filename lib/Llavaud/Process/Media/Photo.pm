@@ -7,7 +7,7 @@ use warnings;
 
 use Carp qw/carp/;
 use File::Basename qw/fileparse/;
-use File::Copy qw/copy/;
+use File::Copy qw/copy move/;
 use File::Path qw/make_path/;
 use Image::ExifTool qw/ImageInfo/;
 use Image::Magick;
@@ -46,8 +46,13 @@ sub init {
     # set final dir
     foreach (keys %{ $main::OPTIONS{'format'} }) {
         next if $main::OPTIONS{'format'}{$_}{'type'} ne 'photo';
+
         $obj->{'final'}->{$_} = &share({});
-        if (defined $main::OPTIONS{'format'}{$_}{'output_dir'}) {
+
+        if ($main::OPTIONS{'inplace'} eq 'true') {
+            $obj->{'final'}->{$_}->{'dir'} = $main::OPTIONS{'tmpdir'}.'/';
+        }
+        elsif (defined $main::OPTIONS{'format'}{$_}{'output_dir'}) {
             $main::OPTIONS{'format'}{$_}{'output_dir'} =~ s/\/+$//;
             # absolute path
             if ($main::OPTIONS{'format'}{$_}{'output_dir'} =~ /^\//) {
@@ -272,6 +277,27 @@ sub integrity {
         print "[$obj->{'final'}->{$_}->{'path'}] Checking integrity...\n" if $main::OPTIONS{'verbose'} eq 'true';
 
         &execute($obj->{'final'}->{$_}->{'path'}, 'File is corrupted', "jpeginfo -c $obj->{'final'}->{$_}->{'path'} >/dev/null 2>&1");
+    }
+
+    return 1;
+}
+
+sub inplace {
+    my $obj = shift;
+
+    lock $obj;
+
+    foreach (keys %{ $main::OPTIONS{'format'} }) {
+        next if $main::OPTIONS{'format'}{$_}{'type'} ne 'photo';
+        next if defined $obj->{'final'}->{$_}->{'exist'} and $main::OPTIONS{'overwrite'} eq 'false';
+
+        print "[$obj->{'final'}->{$_}->{'path'}] Replacing original file...\n" if $main::OPTIONS{'verbose'} eq 'true';
+
+        move($obj->{'final'}->{$_}->{'path'}, $obj->{'original'}->{'dir'}.$obj->{'final'}->{'name'}.$obj->{'final'}->{'extension'});
+
+        if ($obj->{'original'}->{'name'} ne $obj->{'final'}->{'name'}) {
+            unlink $obj->{'original'}->{'path'};
+        }
     }
 
     return 1;

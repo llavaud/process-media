@@ -1,6 +1,5 @@
-%YAML 1.1
+%YAML 1.2
 ---
-
 # 0 = auto, set to detected cpu(s)/core(s)
 max_threads: 0
 
@@ -18,25 +17,26 @@ overwrite: false
 # must be specified in seconds (ex: +3600, -7200, etc...)
 tzoffset: 0
 
----
+tmpdir: "/tmp"
 
+---
 # Format(s) to generate
 
 archive_photo:
-  type: 'photo'
+  type: "photo"
 
   # if set to 'auto', do an auto-rotate according to metadata
   # otherwise rotate to specified value (possible values are 90, 180 or 270 in clockwise)
-  rotate: 'auto'
+  rotate: "auto"
 
   # specify the directory where files will be written
   # output_dir is a relative path from source file directory
   # if no output_dir is specified, default is to use format name
-  output_dir: 'archive'
+  output_dir: "archive"
 
 web_photo:
-  type: 'photo'
-  rotate: 'auto'
+  type: "photo"
+  rotate: "auto"
 
   # resize in order to get the larger side set to this value
   # (only if it is larger, no upscale)
@@ -54,30 +54,30 @@ web_photo:
 
   # a comma separated list of tags that must not be deleted
   # for now only support the tag "orientation" and "gps"
-  strip_exclude: 'orientation'
+  strip_exclude: "orientation"
 
-  output_dir: 'web'
+  output_dir: "web"
 
 archive_video:
-  type: 'video'
-  rotate: 'auto'
+  type: "video"
+  rotate: "auto"
 
   # specify that we want to reencode the video in order to reduce the file size
   reencode: true
 
   # use the x264 video codec (it is the default)
   # for now only support the "x264" and "x265" video codec
-  vcodec: 'x264'
+  vcodec: "x264"
 
   # allow to specify any ffmpeg video codec params
   # see "x264 --help" or "x265 --help" for available options
   #vcodec_params: 'crf=20'
 
-  output_dir: 'archive/videos'
+  output_dir: "archive/videos"
 
 web_video:
-  type: 'video'
-  rotate: 'auto'
+  type: "video"
+  rotate: "auto"
   reencode: true
   resize: 1024
   strip: true
@@ -85,4 +85,4 @@ web_video:
   # we want to generate a thumbnail image
   thumbnail: true
 
-  output_dir: 'web/videos'
+  output_dir: "web/videos"
