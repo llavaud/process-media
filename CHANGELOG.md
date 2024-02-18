@@ -1,3 +1,10 @@
+## 1.8 (2024-02-18)
+
+IMPROVEMENTS:
+* update ffmpeg/ffprobe to 6.1 version 
+
+BUG FIXES:
+
 ## 1.7 (2018-12-26)
 
 IMPROVEMENTS:

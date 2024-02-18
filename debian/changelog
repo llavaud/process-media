@@ -1,3 +1,9 @@
+process-media (1.8) stable; urgency=medium
+
+  * update ffmpeg/ffprobe to 6.1 version
+
+ -- Laurent Lavaud <l.lavaud@gmail.com>  Sun, 18 Feb 2024 18:42:25 +0100
+
 process-media (1.7) stable; urgency=medium
 
   * fix a bug with the detection of mp4 video file
