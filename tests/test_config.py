@@ -127,3 +127,56 @@ def test_global_options_defaults() -> None:
     assert g.max_threads == 0
     assert g.tzoffset == 0
     assert g.verbose is False
+
+
+def test_output_dir_rejects_parent_traversal() -> None:
+    with pytest.raises(ValidationError):
+        FormatSpec(type="photo", output_dir="../escape")
+    with pytest.raises(ValidationError):
+        FormatSpec(type="photo", output_dir="sub/../escape")
+
+
+def test_output_dir_allows_dotted_subdir() -> None:
+    # A leading dot or embedded dot is fine — only ``..`` is forbidden.
+    spec = FormatSpec(type="photo", output_dir=".archive/2024")
+    assert spec.output_dir == ".archive/2024"
+
+
+def test_config_rejects_unknown_root_key(tmp_path: Path) -> None:
+    """``Config(extra=forbid)`` catches typos like ``globals:`` at the top level."""
+    p = tmp_path / "typo.yaml"
+    p.write_text(
+        "globals:\n"  # should be "global"
+        "  max_threads: 1\n"
+        "formats: {}\n"
+    )
+    with pytest.raises(ValidationError):
+        load_config(p)
+
+
+def test_load_config_from_env_var(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    p = tmp_path / "from-env.yaml"
+    p.write_text(
+        "global:\n"
+        "  max_threads: 3\n"
+        "formats:\n"
+        "  fmt:\n"
+        "    type: photo\n"
+        "    output_dir: out\n"
+    )
+    monkeypatch.setenv("PROCESS_MEDIA_CONFIG", str(p))
+    # Use an isolated cwd so the cwd fallback can't accidentally match.
+    monkeypatch.chdir(tmp_path)
+    c = load_config()
+    assert c.global_options.max_threads == 3
+    assert "fmt" in c.formats
+
+
+def test_env_var_overridden_by_explicit_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    env_cfg = tmp_path / "env.yaml"
+    env_cfg.write_text("global: {max_threads: 1}\nformats: {}\n")
+    explicit_cfg = tmp_path / "explicit.yaml"
+    explicit_cfg.write_text("global: {max_threads: 9}\nformats: {}\n")
+    monkeypatch.setenv("PROCESS_MEDIA_CONFIG", str(env_cfg))
+    c = load_config(explicit_cfg)
+    assert c.global_options.max_threads == 9

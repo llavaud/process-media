@@ -29,11 +29,6 @@ from .media.video import process_video
 logger = logging.getLogger("process_media.runner")
 
 
-_DISPATCH: dict[str, Callable[[MediaJob], JobResult]] = {
-    "photo": process_photo,
-    "video": process_video,
-}
-
 
 def _worker_init(log_level: int) -> None:
     """Configure logging inside each worker process.
@@ -64,15 +59,13 @@ def _worker_init(log_level: int) -> None:
 
 def _execute(job: MediaJob) -> JobResult:
     """Worker entry point: must live at module level so it's picklable."""
-    handler = _DISPATCH.get(job.media_type)
-    if handler is None:
-        return JobResult(
-            job=job,
-            success=False,
-            error=f"unknown media_type {job.media_type!r}",
-        )
     try:
-        return handler(job)
+        if job.media_type == "photo":
+            return process_photo(job)
+        elif job.media_type == "video":
+            return process_video(job)
+        else:
+            return JobResult(job=job, success=False, error=f"unknown media_type {job.media_type!r}")
     except Exception as exc:  # pragma: no cover - defensive
         # Bake the traceback into the result so it survives pickling back
         # to the parent. ``logger.exception`` in the worker also emits it.

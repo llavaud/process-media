@@ -108,6 +108,14 @@ def main(
         bool,
         typer.Option("--batch", "-b", help="Non-interactive (skip y/n prompt)."),
     ] = False,
+    dry_run: Annotated[
+        bool,
+        typer.Option(
+            "--dry-run",
+            "-n",
+            help="List the planned source -> target mappings without writing anything.",
+        ),
+    ] = False,
 ) -> None:
     """Process media in PATH according to the configuration file."""
     _setup_logging(verbose)
@@ -183,6 +191,16 @@ def main(
     logger.info(
         "Built %d job(s) across %d format(s).", len(jobs), len(formats)
     )
+
+    if dry_run:
+        for job in jobs:
+            logger.info(
+                "[dry-run] [%s] %s -> %s", job.format_name, job.source, job.target
+            )
+        logger.info(
+            "Dry-run complete: %d job(s) would run, nothing was written.", len(jobs)
+        )
+        raise typer.Exit(code=0)
 
     if not batch:
         proceed = Confirm.ask("Proceed?", default=False)

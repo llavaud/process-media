@@ -6,9 +6,11 @@ These objects must be picklable to be shipped to ``ProcessPoolExecutor``.
 
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass
+from functools import wraps
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Callable, Literal
 
 if TYPE_CHECKING:
     from ..config import FormatSpec
@@ -39,3 +41,46 @@ class JobResult:
     error: str | None = None
     duration: float = 0.0
     skipped: bool = False
+
+
+def job_runner(func: Callable[["MediaJob"], None]) -> Callable[["MediaJob"], JobResult]:
+    """Wrap a job function with the common boilerplate.
+
+    Responsibilities of the decorator:
+
+    * Create the target's parent directory.
+    * Short-circuit when the target already exists and ``overwrite`` is False.
+    * Measure execution duration.
+    * Convert any exception raised by the body into ``JobResult(success=False)``.
+
+    The decorated function is expected to perform its side-effects and
+    return ``None`` on success.
+    """
+
+    @wraps(func)
+    def wrapper(job: MediaJob) -> JobResult:
+        start = time.perf_counter()
+        try:
+            job.target.parent.mkdir(parents=True, exist_ok=True)
+            if job.target.exists() and not job.overwrite:
+                return JobResult(
+                    job=job,
+                    success=True,
+                    duration=time.perf_counter() - start,
+                    skipped=True,
+                )
+            func(job)
+            return JobResult(
+                job=job,
+                success=True,
+                duration=time.perf_counter() - start,
+            )
+        except Exception as exc:
+            return JobResult(
+                job=job,
+                success=False,
+                error=str(exc),
+                duration=time.perf_counter() - start,
+            )
+
+    return wrapper

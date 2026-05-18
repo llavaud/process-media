@@ -83,16 +83,7 @@ def process_video(job: MediaJob) -> JobResult:
 def _reencode(ffmpeg: str, job: MediaJob) -> None:
     spec = job.format_spec
     audio_codec = probe_audio_codec(job.source)
-    log_level = "warning" if job.verbose else "error"
-
-    cmd: list[str] = [
-        ffmpeg,
-        "-nostdin",
-        "-hide_banner",
-        "-y",
-        "-loglevel",
-        log_level,
-    ]
+    cmd: list[str] = _ffmpeg_base(job.verbose)
 
     is_forced_rotation = spec.rotate in {"90", "180", "270"}
     if is_forced_rotation:
@@ -131,6 +122,11 @@ def _reencode(ffmpeg: str, job: MediaJob) -> None:
         cmd += ["-flags", "+global_header", "-f", "mp4", str(tmp)]
         run(cmd)
         os.replace(tmp, job.target)
+
+
+def _ffmpeg_base(verbose: bool) -> list[str]:
+    log_level = "warning" if verbose else "error"
+    return ["ffmpeg", "-nostdin", "-hide_banner", "-y", "-loglevel", log_level]
 
 
 def _build_vf(spec: FormatSpec) -> list[str]:
@@ -268,21 +264,8 @@ def _filter_ffmetadata(raw_path: Path, keep: set[str]) -> Path:
 
 
 def _generate_thumbnail(ffmpeg: str, job: MediaJob) -> None:
-    log_level = "warning" if job.verbose else "error"
     thumb = job.target.with_suffix(".jpg")
-    cmd = [
-        ffmpeg,
-        "-nostdin",
-        "-hide_banner",
-        "-y",
-        "-loglevel",
-        log_level,
-        "-i",
-        str(job.target),
-        "-vframes",
-        "1",
-        str(thumb),
-    ]
+    cmd = _ffmpeg_base(job.verbose) + ["-i", str(job.target), "-vframes", "1", str(thumb)]
     run(cmd)
     # Re-save with Pillow to drop ancillary chunks and force progressive JPEG.
     try:
@@ -305,18 +288,7 @@ def _generate_thumbnail(ffmpeg: str, job: MediaJob) -> None:
 
 
 def _integrity_check(ffmpeg: str, target: Path) -> None:
-    cmd = [
-        ffmpeg,
-        "-nostdin",
-        "-hide_banner",
-        "-loglevel",
-        "error",
-        "-i",
-        str(target),
-        "-f",
-        "null",
-        "-",
-    ]
+    cmd = _ffmpeg_base(False) + ["-i", str(target), "-f", "null", "-"]
     try:
         run(cmd)
     except ToolError as exc:
@@ -358,3 +330,9 @@ class _tempfile:
                 self._path.unlink()
             except OSError:
                 pass
+
+
+# Note: the small custom _tempfile context manager intentionally keeps behavior
+# consistent across platforms (mkstemp + close + Path). It is simple and
+# reliable; using NamedTemporaryFile with delete=False would be an alternative,
+# but this class exists to control the exact naming/location semantics.

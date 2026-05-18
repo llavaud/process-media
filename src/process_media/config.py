@@ -11,6 +11,7 @@ Two YAML layouts are accepted:
 
 from __future__ import annotations
 
+import os
 import re
 from pathlib import Path
 from typing import Any, Literal
@@ -85,6 +86,12 @@ class FormatSpec(BaseModel):
             return v
         if not _OUTPUT_DIR_RE.match(v):
             raise ValueError(f"output_dir contains invalid characters: {v!r}")
+        # Refuse path traversal: any `..` component is rejected even if the
+        # regex would have allowed it (writing outside the source tree is
+        # almost never intended and easy to do by accident).
+        parts = Path(v).parts
+        if ".." in parts:
+            raise ValueError(f"output_dir must not contain '..': {v!r}")
         return v
 
     @field_validator("vcodec_params")
@@ -117,7 +124,7 @@ class FormatSpec(BaseModel):
 class Config(BaseModel):
     """Full configuration: global options + named formats."""
 
-    model_config = ConfigDict(populate_by_name=True)
+    model_config = ConfigDict(populate_by_name=True, extra="forbid")
 
     global_options: GlobalOptions = Field(default_factory=GlobalOptions, alias="global")
     formats: dict[str, FormatSpec] = Field(default_factory=dict)
@@ -135,10 +142,12 @@ def _looks_like_new_layout(doc: Any) -> bool:
 def load_config(path: str | Path | None = None) -> Config:
     """Load configuration from ``path`` or from the default search list.
 
-    The default search order matches the Perl tool:
+    The default search order is:
 
-    1. ``./process-media.yaml`` (current working directory)
-    2. ``/etc/process-media.yaml``
+    1. Explicit ``path`` argument (typically from ``--config``).
+    2. ``$PROCESS_MEDIA_CONFIG`` environment variable.
+    3. ``./process-media.yaml`` (current working directory).
+    4. ``/etc/process-media.yaml``.
 
     Raises:
         FileNotFoundError: if no configuration file can be located.
@@ -148,6 +157,9 @@ def load_config(path: str | Path | None = None) -> Config:
     if path is not None:
         candidates.append(Path(path))
     else:
+        env_path = os.environ.get("PROCESS_MEDIA_CONFIG")
+        if env_path:
+            candidates.append(Path(env_path))
         candidates.append(Path.cwd() / "process-media.yaml")
         candidates.append(Path("/etc/process-media.yaml"))
 
@@ -167,13 +179,9 @@ def _parse_config_text(text: str) -> Config:
         raise ValueError("Configuration file is empty.")
 
     if len(docs) == 1 and _looks_like_new_layout(docs[0]):
-        payload = docs[0]
-        return Config.model_validate(
-            {
-                "global": payload.get("global", {}) or {},
-                "formats": payload.get("formats", {}) or {},
-            }
-        )
+        # Validate the document as-is so ``Config(extra=forbid)`` catches
+        # typos like ``globals:`` instead of ``global:`` at the root level.
+        return Config.model_validate(docs[0])
 
     if len(docs) == 1:
         # Single dict containing only formats.
