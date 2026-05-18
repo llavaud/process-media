@@ -55,7 +55,16 @@ _EXIF_NULL = "0000:00:00 00:00:00"
 
 
 def _classify(path: Path) -> MediaType | None:
-    """Return the media type for ``path`` or ``None`` if unsupported."""
+    """Return the media type for ``path`` or ``None`` if unsupported.
+
+    The extension check (above) handles every format we explicitly
+    support and is the fast path. The :mod:`mimetypes` fallback is a
+    safety net for related extensions we haven't enumerated (e.g.
+    less common video containers, tooling-specific spellings of HEIC
+    like ``.heifs``). It deliberately stays permissive so a downstream
+    pipeline error makes the limitation explicit rather than silently
+    skipping the file.
+    """
     ext = path.suffix.lower()
     if ext in PHOTO_EXTS:
         return "photo"

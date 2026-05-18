@@ -9,7 +9,7 @@ import subprocess
 import sys
 import traceback
 from concurrent.futures import ProcessPoolExecutor, as_completed
-from typing import Callable
+from pathlib import Path
 
 from rich.logging import RichHandler
 from rich.progress import (
@@ -31,15 +31,29 @@ logger = logging.getLogger("process_media.runner")
 
 
 def _worker_init(log_level: int) -> None:
-    """Configure logging inside each worker process.
+    """Configure each worker process.
 
-    ``ProcessPoolExecutor`` spawns fresh interpreters (or forks before the
-    main process configured logging on some platforms), so warnings and
-    exception tracebacks emitted from worker code would otherwise be lost.
+    Three things happen here:
+
+    1. The worker starts its own process group via ``os.setsid()``. This
+       guarantees that any subprocess we launch later (ffmpeg, exiftool)
+       inherits the same PGID, which lets the parent kill the **whole
+       group** with ``os.killpg`` on Ctrl+C. Without this, sending
+       SIGTERM to the worker would leave ffmpeg orphaned and running.
+    2. SIGINT is ignored: the main process orchestrates cancellation by
+       signalling the worker explicitly. Without this every worker would
+       raise ``KeyboardInterrupt`` and pollute the logs.
+    3. Logging is configured from scratch (``ProcessPoolExecutor`` spawns
+       fresh interpreters, or forks before the main process configured
+       logging on some platforms), so warnings and exception tracebacks
+       emitted from worker code reach the user.
     """
-    # Ignore SIGINT in workers: the main process orchestrates cancellation
-    # by killing children explicitly. Without this, every worker would
-    # raise KeyboardInterrupt and pollute the logs.
+    try:
+        os.setsid()
+    except (PermissionError, OSError):
+        # Already a session leader (rare) or unsupported platform — keep going.
+        pass
+
     signal.signal(signal.SIGINT, signal.SIG_IGN)
 
     root = logging.getLogger()
@@ -80,16 +94,23 @@ def _execute(job: MediaJob) -> JobResult:
 
 
 def _kill_pool(executor: ProcessPoolExecutor) -> None:
-    """Forcefully terminate all worker processes (and their ffmpeg children)."""
+    """Forcefully terminate every worker **and its subprocess descendants**.
+
+    Each worker calls ``os.setsid`` in :func:`_worker_init`, so the worker
+    PID equals the PGID of every process it spawns (ffmpeg, exiftool…).
+    Sending SIGTERM to that process group brings down ffmpeg cleanly
+    instead of leaving it orphaned at full CPU after a Ctrl+C.
+    """
     procs = getattr(executor, "_processes", None) or {}
     for proc in list(procs.values()):
         try:
-            # SIGTERM the worker; subprocess.run() inside it has the ffmpeg
-            # child in the same process group, which receives SIGTERM too
-            # on Linux thanks to ``start_new_session=False`` (the default).
-            os.kill(proc.pid, signal.SIGTERM)
-        except (ProcessLookupError, PermissionError):
-            pass
+            os.killpg(proc.pid, signal.SIGTERM)
+        except (ProcessLookupError, PermissionError, OSError):
+            # Worker may have already exited; fall back to per-PID kill.
+            try:
+                os.kill(proc.pid, signal.SIGTERM)
+            except (ProcessLookupError, PermissionError):
+                pass
 
 
 def _reset_tty() -> None:
@@ -110,6 +131,31 @@ def _reset_tty() -> None:
         pass
 
 
+def _clean_stale_tempfiles(jobs: list[MediaJob]) -> None:
+    """Remove ``process-media_tmp.*`` files left over by a previous crash.
+
+    The video pipeline writes through ``_tempfile`` context managers that
+    normally unlink their files on exit. A hard kill (SIGTERM, SIGKILL,
+    machine power-off) interrupts that cleanup, leaving stray temp files
+    next to the eventual target. They never overwrite the real target so
+    they are not a correctness issue — just clutter that we clear up here.
+    """
+    seen: set[Path] = set()
+    for job in jobs:
+        parent = job.target.parent
+        if parent in seen:
+            continue
+        seen.add(parent)
+        if not parent.is_dir():
+            continue
+        for stale in parent.glob("process-media_tmp.*"):
+            try:
+                stale.unlink()
+                logger.debug("Removed stale tempfile %s", stale)
+            except OSError:
+                pass
+
+
 def run_jobs(
     jobs: list[MediaJob],
     *,
@@ -119,6 +165,8 @@ def run_jobs(
     """Submit all ``jobs`` to a process pool, return ``(ok_count, error_count)``."""
     if not jobs:
         return (0, 0)
+
+    _clean_stale_tempfiles(jobs)
 
     if max_workers <= 0:
         max_workers = os.cpu_count() or 1

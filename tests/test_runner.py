@@ -90,8 +90,6 @@ def test_max_workers_capped_to_jobs_count(tmp_path, monkeypatch):
 
     captured = {}
 
-    real_init = runner.ProcessPoolExecutor
-
     class SpyExecutor(InlineExecutor):
         def __init__(self, max_workers=None, *a, **kw):
             captured["mw"] = max_workers
@@ -101,3 +99,44 @@ def test_max_workers_capped_to_jobs_count(tmp_path, monkeypatch):
     jobs = [_make_job(tmp_path, f"f{i}.jpg") for i in range(2)]
     runner.run_jobs(jobs, max_workers=10, batch=True)
     assert captured["mw"] == 2
+
+
+def test_clean_stale_tempfiles_wipes_orphans(tmp_path):
+    """Leftover tempfiles in target dirs are removed before submitting jobs."""
+    from process_media.runner import _clean_stale_tempfiles
+
+    out = tmp_path / "out"
+    out.mkdir()
+    stale1 = out / "process-media_tmp.aaa.mp4"
+    stale2 = out / "process-media_tmp.bbb.ffmeta"
+    keep = out / "process-media_kept.mp4"  # different prefix, must not be touched
+    stale1.write_bytes(b"x")
+    stale2.write_bytes(b"y")
+    keep.write_bytes(b"z")
+
+    job = MediaJob(
+        source=tmp_path / "src.mp4",
+        target=out / "result.mp4",
+        format_name="dummy",
+        format_spec=SimpleNamespace(),
+        media_type="video",
+    )
+    _clean_stale_tempfiles([job])
+
+    assert not stale1.exists()
+    assert not stale2.exists()
+    assert keep.exists()
+
+
+def test_clean_stale_tempfiles_ignores_missing_target_dir(tmp_path):
+    """A target dir that doesn't exist yet must not raise."""
+    from process_media.runner import _clean_stale_tempfiles
+
+    job = MediaJob(
+        source=tmp_path / "src.mp4",
+        target=tmp_path / "nope" / "result.mp4",
+        format_name="dummy",
+        format_spec=SimpleNamespace(),
+        media_type="video",
+    )
+    _clean_stale_tempfiles([job])  # must not raise
