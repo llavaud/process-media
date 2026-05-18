@@ -6,14 +6,13 @@ import logging
 import os
 import shutil
 import tempfile
-import time
 from pathlib import Path
 
 from PIL import Image
 
 from ..config import FormatSpec
 from ..tools import ToolError, probe_audio_codec, run, which
-from .base import JobResult, MediaJob
+from .base import MediaJob, job_runner
 
 
 logger = logging.getLogger("process_media.video")
@@ -21,58 +20,44 @@ logger = logging.getLogger("process_media.video")
 _THUMB_QUALITY = 90
 
 
-def process_video(job: MediaJob) -> JobResult:
-    """Execute one video job end-to-end."""
-    start = time.monotonic()
+@job_runner
+def process_video(job: MediaJob) -> None:
+    """Execute one video job end-to-end.
+
+    The pipeline is **atomic**: we work on a temporary file living next to
+    the final target and only ``os.replace`` it into place after every
+    step completed successfully. Any crash (ffmpeg failure, interruption)
+    leaves the existing target intact and the temp file is cleaned up.
+    The thumbnail (if requested) is generated after the atomic swap so
+    it can sit next to the now-final video.
+    """
     spec = job.format_spec
-    try:
-        job.target.parent.mkdir(parents=True, exist_ok=True)
+    ffmpeg = which("ffmpeg")
+    if ffmpeg is None:
+        raise ToolError("ffmpeg binary is required but was not found")
 
-        if job.target.exists() and not job.overwrite:
-            logger.warning("Skip existing target %s", job.target)
-            return JobResult(
-                job=job,
-                success=True,
-                duration=time.monotonic() - start,
-                skipped=True,
-            )
+    needs_pipeline = spec.reencode or spec.strip
+    if not needs_pipeline:
+        # Pure rename / copy: still go through a tempfile so a crashed
+        # ``shutil.copy2`` cannot leave a half-written target.
+        with _tempfile(job.target.parent, suffix=".mp4") as tmp:
+            shutil.copy2(job.source, tmp)
+            os.replace(tmp, job.target)
+    else:
+        # Pipeline: build the new file in ``working``, swap to ``job.target``
+        # only when every step succeeded.
+        with _tempfile(job.target.parent, suffix=".mp4") as working:
+            shutil.copy2(job.source, working)
+            if spec.reencode:
+                _reencode(ffmpeg, working, spec, job.verbose)
+            if spec.strip:
+                _strip_metadata(ffmpeg, working, spec, job.verbose)
+            os.replace(working, job.target)
 
-        # Initial copy: even when re-encoding, the legacy tool copies first
-        # then operates on the target so we keep the same semantics (and
-        # the source file is never touched).
-        shutil.copy2(job.source, job.target)
+    if spec.thumbnail:
+        _generate_thumbnail(ffmpeg, job)
 
-        ffmpeg = which("ffmpeg")
-        if ffmpeg is None:
-            raise ToolError("ffmpeg binary is required but was not found")
-
-        if spec.reencode:
-            _reencode(ffmpeg, job)
-
-        if spec.strip:
-            _strip_metadata(ffmpeg, job)
-
-        if spec.thumbnail:
-            _generate_thumbnail(ffmpeg, job)
-
-        _integrity_check(ffmpeg, job.target)
-
-        return JobResult(job=job, success=True, duration=time.monotonic() - start)
-    except Exception as exc:
-        logger.exception("Video job failed: %s", job.source)
-        # Best-effort cleanup of partial outputs.
-        if job.target.exists():
-            try:
-                # Only remove if we created an incomplete file.
-                pass
-            except Exception:
-                pass
-        return JobResult(
-            job=job,
-            success=False,
-            error=str(exc),
-            duration=time.monotonic() - start,
-        )
+    _integrity_check(ffmpeg, job.target)
 
 
 # ---------------------------------------------------------------------------
@@ -80,17 +65,21 @@ def process_video(job: MediaJob) -> JobResult:
 # ---------------------------------------------------------------------------
 
 
-def _reencode(ffmpeg: str, job: MediaJob) -> None:
-    spec = job.format_spec
-    audio_codec = probe_audio_codec(job.source)
-    cmd: list[str] = _ffmpeg_base(job.verbose)
+def _reencode(ffmpeg: str, working: Path, spec: FormatSpec, verbose: bool) -> None:
+    """Reencode ``working`` in place.
+
+    Reads ``working``, writes to a sibling tempfile and ``os.replace`` it
+    back onto ``working`` only on ffmpeg success.
+    """
+    audio_codec = probe_audio_codec(working)
+    cmd: list[str] = _ffmpeg_base(verbose)
 
     is_forced_rotation = spec.rotate in {"90", "180", "270"}
     if is_forced_rotation:
         # Disable ffmpeg's auto-rotation so our transpose stays predictable.
         cmd.append("-noautorotate")
 
-    cmd += ["-i", str(job.target)]
+    cmd += ["-i", str(working)]
 
     # Video codec.
     if spec.vcodec == "x265":
@@ -118,10 +107,10 @@ def _reencode(ffmpeg: str, job: MediaJob) -> None:
     if is_forced_rotation:
         cmd += ["-metadata:s:v", "rotate=0"]
 
-    with _tempfile(job.target.parent, suffix=job.target.suffix or ".mp4") as tmp:
+    with _tempfile(working.parent, suffix=".mp4") as tmp:
         cmd += ["-flags", "+global_header", "-f", "mp4", str(tmp)]
         run(cmd)
-        os.replace(tmp, job.target)
+        os.replace(tmp, working)
 
 
 def _ffmpeg_base(verbose: bool) -> list[str]:
@@ -150,83 +139,67 @@ def _build_vf(spec: FormatSpec) -> list[str]:
 # ---------------------------------------------------------------------------
 
 
-def _strip_metadata(ffmpeg: str, job: MediaJob) -> None:
-    spec = job.format_spec
-    log_level = "warning" if job.verbose else "error"
-    target = job.target
-    target_dir = target.parent
+def _strip_metadata(ffmpeg: str, working: Path, spec: FormatSpec, verbose: bool) -> None:
+    """Strip metadata from ``working`` in place, preserving the whitelist.
 
+    1. If a whitelist is configured, extract ffmetadata from the current
+       file and filter it.
+    2. Strip every metadata tag from the video.
+    3. Re-inject the filtered whitelist (if any).
+
+    All temp files (filtered ffmetadata + intermediate videos) live next
+    to ``working`` and are cleaned up unconditionally — even when ffmpeg
+    fails midway. ``working`` is updated via ``os.replace`` so it always
+    points to a complete file or its previous content.
+    """
+    work_dir = working.parent
+
+    # Step 1: capture the whitelist into ``preserved_meta`` (or ``None``).
     preserved_meta: Path | None = None
-    if spec.strip_exclude:
-        with _tempfile(target_dir, suffix=".ffmeta", delete=False) as raw_meta:
-            extract_cmd = [
-                ffmpeg,
-                "-nostdin",
-                "-hide_banner",
-                "-y",
-                "-loglevel",
-                log_level,
-                "-i",
-                str(target),
-                "-f",
-                "ffmetadata",
-                str(raw_meta),
+    try:
+        if spec.strip_exclude:
+            with _tempfile(work_dir, suffix=".ffmeta", delete=False) as raw_meta:
+                extract_cmd = _ffmpeg_base(verbose) + [
+                    "-i", str(working),
+                    "-f", "ffmetadata",
+                    str(raw_meta),
+                ]
+                run(extract_cmd)
+                preserved_meta = _filter_ffmetadata(raw_meta, set(spec.strip_exclude))
+                # ``_filter_ffmetadata`` may unlink the file if nothing was
+                # kept; normalise to None in that case.
+                if not preserved_meta.exists():
+                    preserved_meta = None
+
+        # Step 2: strip every metadata tag from the video.
+        with _tempfile(work_dir, suffix=".mp4") as stripped:
+            strip_cmd = _ffmpeg_base(verbose) + [
+                "-i", str(working),
+                "-codec", "copy",
+                "-map_metadata", "-1",
+                "-map_metadata:s:v", "-1",
+                "-map_metadata:s:a", "-1",
+                "-f", "mp4",
+                str(stripped),
             ]
-            run(extract_cmd)
-            preserved_meta = _filter_ffmetadata(raw_meta, set(spec.strip_exclude))
+            run(strip_cmd)
+            os.replace(stripped, working)
 
-    # Step: strip everything from the video itself.
-    with _tempfile(target_dir, suffix=target.suffix or ".mp4") as stripped:
-        strip_cmd = [
-            ffmpeg,
-            "-nostdin",
-            "-hide_banner",
-            "-y",
-            "-loglevel",
-            log_level,
-            "-i",
-            str(target),
-            "-codec",
-            "copy",
-            "-map_metadata",
-            "-1",
-            "-map_metadata:s:v",
-            "-1",
-            "-map_metadata:s:a",
-            "-1",
-            "-f",
-            "mp4",
-            str(stripped),
-        ]
-        run(strip_cmd)
-        os.replace(stripped, target)
-
-    # Step: re-inject preserved metadata, if any.
-    if preserved_meta is not None and preserved_meta.exists():
-        try:
-            with _tempfile(target_dir, suffix=target.suffix or ".mp4") as merged:
-                merge_cmd = [
-                    ffmpeg,
-                    "-nostdin",
-                    "-hide_banner",
-                    "-y",
-                    "-loglevel",
-                    log_level,
-                    "-i",
-                    str(target),
-                    "-i",
-                    str(preserved_meta),
-                    "-map_metadata",
-                    "1",
-                    "-codec",
-                    "copy",
-                    "-f",
-                    "mp4",
+        # Step 3: re-inject the preserved metadata, if any.
+        if preserved_meta is not None:
+            with _tempfile(work_dir, suffix=".mp4") as merged:
+                merge_cmd = _ffmpeg_base(verbose) + [
+                    "-i", str(working),
+                    "-i", str(preserved_meta),
+                    "-map_metadata", "1",
+                    "-codec", "copy",
+                    "-f", "mp4",
                     str(merged),
                 ]
                 run(merge_cmd)
-                os.replace(merged, target)
-        finally:
+                os.replace(merged, working)
+    finally:
+        if preserved_meta is not None:
             preserved_meta.unlink(missing_ok=True)
 
 

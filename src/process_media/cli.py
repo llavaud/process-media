@@ -50,7 +50,7 @@ def main(
         typer.Argument(
             exists=True,
             readable=True,
-            help="File or directory to scan (non-recursive).",
+            help="File or directory to scan (use --recursive to descend).",
         ),
     ],
     type_filter: Annotated[
@@ -165,13 +165,17 @@ def main(
         logger.error("No format matches the requested --type/--format selection.")
         raise typer.Exit(code=2)
 
-    needs_ffmpeg = any(spec.type == "video" for spec in formats.values())
-    needs_exiftool = any(spec.type == "photo" for spec in formats.values())
-    try:
-        ensure_tools(needs_ffmpeg=needs_ffmpeg, needs_exiftool=needs_exiftool)
-    except RuntimeError as exc:
-        logger.error("%s", exc)
-        raise typer.Exit(code=3)
+    # In dry-run mode we never touch the disk, so we don't enforce the
+    # presence of ffmpeg/exiftool. A user can preview a plan on a machine
+    # that doesn't have the binaries installed yet.
+    if not dry_run:
+        needs_ffmpeg = any(spec.type == "video" for spec in formats.values())
+        needs_exiftool = any(spec.type == "photo" for spec in formats.values())
+        try:
+            ensure_tools(needs_ffmpeg=needs_ffmpeg, needs_exiftool=needs_exiftool)
+        except RuntimeError as exc:
+            logger.error("%s", exc)
+            raise typer.Exit(code=3)
 
     files = scan_media(path, recursive=recursive)
     if not files:
@@ -189,7 +193,9 @@ def main(
     logger.info("Found %d media file(s) under %s", len(files), path)
 
     exif_dates: dict = {}
-    if not cfg.global_options.keep_name:
+    # Skip the (potentially slow) EXIF batch in dry-run too: target names
+    # will fall back to source stems, which is good enough for previewing.
+    if not cfg.global_options.keep_name and not dry_run:
         try:
             exif_dates = batch_exif_dates([p for p, _ in files])
         except Exception as exc:

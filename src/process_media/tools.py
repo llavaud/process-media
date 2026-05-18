@@ -38,12 +38,37 @@ def ensure_tools(needs_ffmpeg: bool, needs_exiftool: bool) -> None:
         raise RuntimeError(f"Missing required tools: {', '.join(missing)}")
 
 
-def run(cmd: Sequence[str], check: bool = True, timeout: int | None = None, cwd: Path | None = None) -> subprocess.CompletedProcess:
+def run(
+    cmd: Sequence[str],
+    check: bool = True,
+    timeout: int | None = None,
+    cwd: Path | None = None,
+) -> subprocess.CompletedProcess:
+    """Wrap ``subprocess.run`` with project-wide defaults.
+
+    - Captures stdout and stderr (returned via ``CompletedProcess``).
+    - Closes stdin (``DEVNULL``) so child processes cannot block on input.
+    - Raises :class:`ToolError` on non-zero exit when ``check=True``.
+    - Forwards ``timeout`` so callers can bound long-running commands;
+      a timeout converts to ``ToolError`` like any other failure.
+    """
     logger.debug("Running command: %s", cmd)
     try:
-        cp = subprocess.run(list(cmd), check=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.DEVNULL, cwd=str(cwd) if cwd else None)
+        cp = subprocess.run(
+            list(cmd),
+            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            stdin=subprocess.DEVNULL,
+            cwd=str(cwd) if cwd else None,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise ToolError(
+            f"Command {cmd!r} timed out after {exc.timeout}s"
+        ) from exc
     except Exception as e:
-        raise ToolError(str(e))
+        raise ToolError(str(e)) from e
     if check and cp.returncode != 0:
         stderr = cp.stderr.decode(errors="ignore")[:2000]
         raise ToolError(f"Command {cmd!r} failed (rc={cp.returncode}): {stderr}")
