@@ -1,106 +1,157 @@
-# process-media
+# process-media (Python)
 
-This script will process (resize, compress...) photos and videos according to the specified options.
+Modern Python rewrite of the original Perl tool. Renames media files from
+their EXIF capture date and processes them through one or more named output
+formats (rotation, resize, JPEG quality, video reencoding, metadata stripping,
+thumbnail generation, integrity check).
 
-## Table of contents
-* [Installation](#installation)
-  * [Package (favourite)](#package)
-  * [Docker](#docker)
-  * [Archive](#archive)
-* [Configuration](#configuration)
-* [CLI](#cli)
-  * [Examples](#examples)
+The Python port targets Python 3.11+ and uses **system-installed** ffmpeg /
+exiftool — the bundled binaries from the original repo are no longer needed.
+
+## Features
+
+- Pillow-based JPEG processing (auto-orient via EXIF, forced rotation, resize
+  without upscaling, progressive output, atomic writes).
+- exiftool wrapper (via `pyexiftool`) to strip metadata while optionally
+  preserving GPS or orientation.
+- ffmpeg-based reencoding (libx264 / libx265), audio kept as-is when already
+  AAC, rotated/scaled via standard filters.
+- ffmetadata round-trip to strip media while keeping a whitelist of tags
+  (`location*`, `rotate*`).
+- Parallel processing via `ProcessPoolExecutor`, Rich progress bar in
+  interactive mode, clean SIGINT handling.
+- Pydantic v2 config with validation; supports the legacy two-document YAML
+  layout (with the `---` separator) and a new single-document layout.
 
 ## Installation
 
-<a name="package"/>
-
-### Package (favourite)
-
-I have setup a **Debian/Ubuntu** apt repository to distribute this package
-
-You can add my personal repository to your **`/etc/apt/sources.list`** by adding the following line:
-
-`deb [arch=amd64] https://llavaud.github.io/process-media/apt stable main`
-
-You must also retrieve and install my GPG key:
-
-`wget -O - https://llavaud.github.io/process-media/apt/conf/gpg.key | sudo apt-key add -`
-
-And then install the package:
-
-```
-sudo apt-get update
-sudo apt-get install process-media
+```bash
+python -m venv .venv
+.venv/bin/pip install -e .
 ```
 
-### Docker
+System tools (must be on `$PATH`):
 
-A Docker image with the latest release is available, go to the [Docker Hub image page](https://hub.docker.com/r/llavaud/process-media/ "Docker Hub image page") to get instructions
+- `ffmpeg`, `ffprobe` (required for video formats)
+- `exiftool` (required for photo metadata stripping)
+- `jpeginfo` (optional, used for JPEG integrity check)
 
-### Archive
-
-If you dont want to add a new repository on your system you can also retrieve the [latest zip/tar.gz archive](https://github.com/llavaud/process-media/releases/latest)
-
-This script depends on several binary or Perl library, so you need to install the following **Debian/Ubuntu** packages before using it:
+On Debian/Ubuntu:
 
 ```bash
-sudo apt-get install jpeginfo libimage-exiftool-perl libimage-magick-perl libmime-types-perl libsys-cpu-perl libterm-readkey-perl libyaml-tiny-perl
+sudo apt install ffmpeg libimage-exiftool-perl jpeginfo
 ```
 
-Once the packages are installed, you just need to extract the archive
+## Usage
 
-## Configuration
-
-First you need to define the different formats you want in the configuration file, the script will search for a configuration file by respecting the following order:
-
-1. **`process-media.yaml`**
-2. **`/etc/process-media.yaml`**
-
-Here is a photo format example:
-
-```
-web_photo:
-  type: 'photo'
-  rotate: 'auto'
-  resize: 1920
-  compress: 90
-  progressive: true
-  strip: true
-  strip_exclude: 'gps'
-  output_dir: 'web'
+```bash
+process-media /path/to/files [options]
 ```
 
-Here we define a photo format named **web_photo**.
+Options (all optional, defaults from config):
 
-The resulting photo(s) will be auto-rotated, resized, compressed, progressive jpeg enabled and all metadata will be removed except GPS informations.
+| Flag                       | Description                                                |
+| -------------------------- | ---------------------------------------------------------- |
+| `-t, --type photo,video`   | Media types to process (default: both).                    |
+| `-f, --format name1,name2` | Restrict to specific format names from config.             |
+| `-c, --config FILE`        | Path to config file.                                       |
+| `-m, --max-threads N`      | Worker count (0 = CPU count).                              |
+| `--tzoffset SECONDS`       | Apply timezone offset when renaming.                       |
+| `-k, --keep-name`          | Skip EXIF-based renaming.                                  |
+| `-v, --verbose`            | Verbose logging.                                           |
+| `-o, --overwrite`          | Overwrite existing targets.                                |
+| `-b, --batch`              | Don't prompt for confirmation.                             |
 
-## CLI
+Config resolution order: `--config` > `./process-media.yaml` >
+`/etc/process-media.yaml`.
 
+## Config
+
+New layout (recommended):
+
+```yaml
+global:
+  max_threads: 0
+  verbose: false
+  keep_name: false
+  overwrite: false
+  tzoffset: 0
+formats:
+  archive_photo:
+    type: photo
+    rotate: auto
+    output_dir: archive
+  web_photo:
+    type: photo
+    rotate: auto
+    resize: 1920
+    compress: 90
+    progressive: true
+    strip: true
+    strip_exclude: [orientation]
+    output_dir: web
+  archive_video:
+    type: video
+    rotate: auto
+    reencode: true
+    vcodec: x264
+    output_dir: archive/videos
+  web_video:
+    type: video
+    rotate: auto
+    reencode: true
+    resize: 1024
+    strip: true
+    thumbnail: true
+    output_dir: web/videos
 ```
-Usage: ./process-media <path> [options]
 
-<path> is the path to photos or videos to process
+The legacy two-document YAML format from the Perl version (global options in
+doc 1, formats in doc 2 separated by `---`) is still accepted.
 
-Options:
--t,--type        {photo,video}  Type of files to process (default: photo,video)
--f,--format      {format1,...}  Format to generate (default: all format defined in config file)
--c,--config      <config_file>  Config file to load (default: search local process-media.yaml file or in /etc)
--m,--max_threads <num_threads>  Maximum allowed threads (default: number of cpu(s)/core(s))
--tz,--tzoffset                  Allow to change the default timezone offset used to rename file(s) (in seconds)
--k,--keep_name                  Do not rename file
--v,--verbose                    Verbose output
--o,--overwrite                  Overwrite existing files
--b,--batch                      Run in non-interactive mode, allowing to run in a crontab
--h,--help                       This help text
+### Format options
+
+Photo (`type: photo`):
+
+- `rotate`: `auto` (use EXIF Orientation) or `90`/`180`/`270` (clockwise).
+- `resize`: integer (longest side, no upscaling).
+- `compress`: 0-100 (JPEG quality).
+- `progressive`: bool.
+- `strip`: bool — remove all EXIF.
+- `strip_exclude`: `gps`, `orientation`, or both.
+- `output_dir`: relative (anchored on source dir) or absolute. Defaults to the
+  format name.
+
+Video (`type: video`):
+
+- `rotate`: same as above (`auto` keeps source rotation tag).
+- `reencode`: bool.
+- `vcodec`: `x264` or `x265`.
+- `vcodec_params`: raw `-x264-params` / `-x265-params` string.
+- `resize`: integer (longest side, no upscaling, via `scale` filter).
+- `strip`: bool — round-trip through ffmetadata.
+- `thumbnail`: bool — write a JPEG next to the output video.
+- `output_dir`: same semantics as photo.
+
+## Duplicate handling
+
+When several source files would yield the same target name (after EXIF
+renaming), they all receive a numerical suffix `-001`, `-002`, … per output
+format. Dedup is independent for photos and videos.
+
+## Development
+
+```bash
+.venv/bin/pip install -e ".[dev]"
+.venv/bin/pytest -q
 ```
 
-### Examples
+## Docker
 
-* If you want to convert all photos and videos in the current directory by using all defined format(s) from the configuration file:
+A `Dockerfile` is provided that installs ffmpeg / exiftool / jpeginfo and the
+Python package:
 
-`process-media`
-
-* If you want to convert all photos in the folder **/home/foo** by using the previous define format **web_photo**:
-
-`process-media /home/foo -f web_photo`
+```bash
+docker build -t process-media .
+docker run --rm -v "$PWD:/data" process-media /data -b
+```
