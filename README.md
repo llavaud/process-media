@@ -25,11 +25,21 @@ Targets Python 3.11+ and uses **system-installed** ffmpeg / exiftool.
 ## Installation
 
 ```bash
-python -m venv .venv
-.venv/bin/pip install -e .
+make install
 ```
 
-For HEIC / HEIF (Apple) photo support, install the optional extra:
+This creates `.venv/` and installs the package in editable mode together
+with the dev extras (pytest, ruff, mypy, pillow-heif). See `make help`
+for the full list of available targets.
+
+If you'd rather drive things by hand:
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -e ".[dev]"
+```
+
+For HEIC / HEIF (Apple) photo support only (without the dev tooling):
 
 ```bash
 .venv/bin/pip install -e ".[heic]"
@@ -149,9 +159,14 @@ format. Dedup is independent for photos and videos.
 
 ## Development
 
+Common workflows are wired through the Makefile:
+
 ```bash
-.venv/bin/pip install -e ".[dev]"
-.venv/bin/pytest -q
+make test       # run pytest
+make lint       # ruff check
+make format     # ruff format
+make check      # lint + tests
+make clean      # wipe .venv and caches
 ```
 
 ## Docker

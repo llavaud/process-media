@@ -33,4 +33,6 @@ packages = ["src/process_media"]
 
 [tool.ruff]
 line-length = 100
-select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
