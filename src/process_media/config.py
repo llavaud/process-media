@@ -138,15 +138,38 @@ def _looks_like_new_layout(doc: Any) -> bool:
     return isinstance(doc, dict) and ("global" in doc or "formats" in doc)
 
 
-def load_config(path: str | Path | None = None) -> Config:
-    """Load configuration from ``path`` or from the default search list.
+def load_config(
+    path: str | Path | None = None,
+    *,
+    source_path: str | Path | None = None,
+) -> Config:
+    """Load configuration and return it.
 
-    The default search order is:
+    See :func:`resolve_and_load_config` for the search order; this thin
+    wrapper exists for the common case where the caller doesn't care
+    which file was actually used.
+    """
+    cfg, _ = resolve_and_load_config(path, source_path=source_path)
+    return cfg
+
+
+def resolve_and_load_config(
+    path: str | Path | None = None,
+    *,
+    source_path: str | Path | None = None,
+) -> tuple[Config, Path]:
+    """Load configuration and return ``(Config, source_file)``.
+
+    Search order (first hit wins):
 
     1. Explicit ``path`` argument (typically from ``--config``).
     2. ``$PROCESS_MEDIA_CONFIG`` environment variable.
-    3. ``./process-media.yaml`` (current working directory).
-    4. ``/etc/process-media.yaml``.
+    3. ``<source_path>/process-media.yaml`` — when ``source_path`` is a
+       directory, or its parent when ``source_path`` is a file. This lets
+       users drop a config alongside their media without thinking about
+       the current working directory.
+    4. ``./process-media.yaml`` (current working directory).
+    5. ``/etc/process-media.yaml``.
 
     Raises:
         FileNotFoundError: if no configuration file can be located.
@@ -159,12 +182,16 @@ def load_config(path: str | Path | None = None) -> Config:
         env_path = os.environ.get("PROCESS_MEDIA_CONFIG")
         if env_path:
             candidates.append(Path(env_path))
+        if source_path is not None:
+            sp = Path(source_path)
+            base = sp if sp.is_dir() else sp.parent
+            candidates.append(base / "process-media.yaml")
         candidates.append(Path.cwd() / "process-media.yaml")
         candidates.append(Path("/etc/process-media.yaml"))
 
     for candidate in candidates:
         if candidate.is_file():
-            return _parse_config_text(candidate.read_text(encoding="utf-8"))
+            return _parse_config_text(candidate.read_text(encoding="utf-8")), candidate
 
     raise FileNotFoundError(
         "No configuration file found. Tried: "

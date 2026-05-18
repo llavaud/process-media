@@ -11,7 +11,7 @@ import typer
 from rich.logging import RichHandler
 from rich.prompt import Confirm
 
-from .config import FormatSpec, load_config
+from .config import FormatSpec, resolve_and_load_config
 from .media.base import MediaType
 from .naming import batch_exif_dates, build_jobs, scan_media
 from .runner import run_jobs
@@ -129,13 +129,15 @@ def main(
     _setup_logging(verbose)
 
     try:
-        cfg = load_config(config_path)
+        cfg, cfg_source = resolve_and_load_config(config_path, source_path=path)
     except FileNotFoundError as exc:
         logger.error("%s", exc)
         raise typer.Exit(code=2)
     except Exception as exc:  # ValidationError, yaml errors…
         logger.error("Invalid configuration: %s", exc)
         raise typer.Exit(code=2)
+
+    logger.info("Loaded configuration from %s", cfg_source)
 
     # CLI overrides take precedence over the config file.
     if max_threads is not None:
