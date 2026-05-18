@@ -2,11 +2,9 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 
-from process_media import tools
 from process_media.tools import ToolError, ensure_tools, probe_audio_codec, run, which
 
 

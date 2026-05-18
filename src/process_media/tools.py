@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from pathlib import Path
+import logging
 import shutil
 import subprocess
-import logging
-from typing import Sequence
+from collections.abc import Sequence
 from functools import lru_cache
+from pathlib import Path
 
 logger = logging.getLogger("process_media.tools")
 
@@ -57,16 +57,13 @@ def run(
         cp = subprocess.run(
             list(cmd),
             check=False,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            capture_output=True,
             stdin=subprocess.DEVNULL,
             cwd=str(cwd) if cwd else None,
             timeout=timeout,
         )
     except subprocess.TimeoutExpired as exc:
-        raise ToolError(
-            f"Command {cmd!r} timed out after {exc.timeout}s"
-        ) from exc
+        raise ToolError(f"Command {cmd!r} timed out after {exc.timeout}s") from exc
     except Exception as e:
         raise ToolError(str(e)) from e
     if check and cp.returncode != 0:
@@ -79,7 +76,18 @@ def probe_audio_codec(path: Path) -> str | None:
     ffprobe = which("ffprobe")
     if not ffprobe:
         return None
-    cmd = [ffprobe, "-v", "error", "-select_streams", "a", "-show_entries", "stream=codec_name", "-of", "csv=p=0", str(path)]
+    cmd = [
+        ffprobe,
+        "-v",
+        "error",
+        "-select_streams",
+        "a",
+        "-show_entries",
+        "stream=codec_name",
+        "-of",
+        "csv=p=0",
+        str(path),
+    ]
     try:
         cp = run(cmd, check=False)
         out = cp.stdout.decode().strip()

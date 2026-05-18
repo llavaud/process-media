@@ -18,7 +18,6 @@ from typing import Any, Literal
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-
 Rotate = Literal["auto", "90", "180", "270"]
 Vcodec = Literal["x264", "x265"]
 StripExcludeItem = Literal["gps", "orientation"]
@@ -103,20 +102,16 @@ class FormatSpec(BaseModel):
         return v
 
     @model_validator(mode="after")
-    def _check_video_only_options(self) -> "FormatSpec":
+    def _check_video_only_options(self) -> FormatSpec:
         if self.type == "photo":
             for forbidden in ("reencode", "thumbnail", "vcodec", "vcodec_params"):
                 value = getattr(self, forbidden)
                 if value not in (None, False):
-                    raise ValueError(
-                        f"option {forbidden!r} is not valid for type=photo"
-                    )
+                    raise ValueError(f"option {forbidden!r} is not valid for type=photo")
         else:  # video
             for forbidden in ("progressive", "compress"):
                 if getattr(self, forbidden) not in (None, False):
-                    raise ValueError(
-                        f"option {forbidden!r} is not valid for type=video"
-                    )
+                    raise ValueError(f"option {forbidden!r} is not valid for type=video")
         return self
 
 
@@ -194,8 +189,7 @@ def resolve_and_load_config(
             return _parse_config_text(candidate.read_text(encoding="utf-8")), candidate
 
     raise FileNotFoundError(
-        "No configuration file found. Tried: "
-        + ", ".join(str(c) for c in candidates)
+        "No configuration file found. Tried: " + ", ".join(str(c) for c in candidates)
     )
 
 

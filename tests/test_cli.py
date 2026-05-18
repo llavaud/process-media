@@ -9,7 +9,6 @@ from typer.testing import CliRunner
 
 from process_media.cli import app
 
-
 runner_ = CliRunner()
 
 
@@ -67,7 +66,9 @@ def test_dry_run_does_not_write(tmp_path: Path, monkeypatch: pytest.MonkeyPatch)
     media.mkdir()
     (media / "x.jpg").write_bytes(b"\xff\xd8\xff" + b"\x00" * 100)
     # Bypass the real exiftool/ffmpeg dependency checks for unit testing.
-    monkeypatch.setattr("process_media.cli.batch_exif_dates", lambda paths: {p: None for p in paths})
+    monkeypatch.setattr(
+        "process_media.cli.batch_exif_dates", lambda paths: {p: None for p in paths}
+    )
     monkeypatch.setattr("process_media.cli.ensure_tools", lambda **kw: None)
     result = runner_.invoke(app, [str(media), "-b", "-n", "-c", str(cfg)])
     assert result.exit_code == 0, result.stdout

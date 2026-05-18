@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import logging
-import sys
 from pathlib import Path
-from typing import Annotated, Optional, cast
+from typing import Annotated, cast
 
 import typer
 from rich.logging import RichHandler
@@ -16,7 +15,6 @@ from .media.base import MediaType
 from .naming import batch_exif_dates, build_jobs, scan_media
 from .runner import run_jobs
 from .tools import ensure_tools
-
 
 logger = logging.getLogger("process_media")
 app = typer.Typer(add_completion=False, help="Process photos and videos.")
@@ -62,7 +60,7 @@ def main(
         ),
     ] = "photo,video",
     format_filter: Annotated[
-        Optional[str],
+        str | None,
         typer.Option(
             "--format",
             "-f",
@@ -70,7 +68,7 @@ def main(
         ),
     ] = None,
     config_path: Annotated[
-        Optional[Path],
+        Path | None,
         typer.Option(
             "--config",
             "-c",
@@ -78,7 +76,7 @@ def main(
         ),
     ] = None,
     max_threads: Annotated[
-        Optional[int],
+        int | None,
         typer.Option(
             "--max-threads",
             "-m",
@@ -86,7 +84,7 @@ def main(
         ),
     ] = None,
     tzoffset: Annotated[
-        Optional[int],
+        int | None,
         typer.Option(
             "--tzoffset",
             help="Seconds added to EXIF timestamps before renaming.",
@@ -132,10 +130,10 @@ def main(
         cfg, cfg_source = resolve_and_load_config(config_path, source_path=path)
     except FileNotFoundError as exc:
         logger.error("%s", exc)
-        raise typer.Exit(code=2)
+        raise typer.Exit(code=2) from exc
     except Exception as exc:  # ValidationError, yaml errors…
         logger.error("Invalid configuration: %s", exc)
-        raise typer.Exit(code=2)
+        raise typer.Exit(code=2) from exc
 
     logger.info("Loaded configuration from %s", cfg_source)
 
@@ -160,8 +158,7 @@ def main(
     formats: dict[str, FormatSpec] = {
         name: spec
         for name, spec in cfg.formats.items()
-        if spec.type in wanted_types
-        and (not wanted_formats or name in wanted_formats)
+        if spec.type in wanted_types and (not wanted_formats or name in wanted_formats)
     }
     if not formats:
         logger.error("No format matches the requested --type/--format selection.")
@@ -177,7 +174,7 @@ def main(
             ensure_tools(needs_ffmpeg=needs_ffmpeg, needs_exiftool=needs_exiftool)
         except RuntimeError as exc:
             logger.error("%s", exc)
-            raise typer.Exit(code=3)
+            raise typer.Exit(code=3) from exc
 
     files = scan_media(path, recursive=recursive)
     if not files:
@@ -204,18 +201,12 @@ def main(
             logger.warning("EXIF extraction failed (%s); falling back to original names.", exc)
 
     jobs = build_jobs(files, formats, cfg.global_options, exif_dates)
-    logger.info(
-        "Built %d job(s) across %d format(s).", len(jobs), len(formats)
-    )
+    logger.info("Built %d job(s) across %d format(s).", len(jobs), len(formats))
 
     if dry_run:
         for job in jobs:
-            logger.info(
-                "[dry-run] [%s] %s -> %s", job.format_name, job.source, job.target
-            )
-        logger.info(
-            "Dry-run complete: %d job(s) would run, nothing was written.", len(jobs)
-        )
+            logger.info("[dry-run] [%s] %s -> %s", job.format_name, job.source, job.target)
+        logger.info("Dry-run complete: %d job(s) would run, nothing was written.", len(jobs))
         raise typer.Exit(code=0)
 
     if not batch:

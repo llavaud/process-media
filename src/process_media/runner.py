@@ -25,9 +25,7 @@ from .media.base import JobResult, MediaJob
 from .media.photo import process_photo
 from .media.video import process_video
 
-
 logger = logging.getLogger("process_media.runner")
-
 
 
 def _worker_init(log_level: int) -> None:
@@ -124,8 +122,12 @@ def _reset_tty() -> None:
         return
     try:
         subprocess.run(
-            ["stty", "sane"], check=False, stdin=None, stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL, timeout=2,
+            ["stty", "sane"],
+            check=False,
+            stdin=None,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=2,
         )
     except (FileNotFoundError, subprocess.TimeoutExpired):
         pass
@@ -245,9 +247,7 @@ def _collect(future, job: MediaJob, ok: int, err: int) -> tuple[int, int]:
             )
         return (ok + 1, err)
 
-    logger.error(
-        "[%s] %s failed: %s", job.format_name, job.source.name, result.error
-    )
+    logger.error("[%s] %s failed: %s", job.format_name, job.source.name, result.error)
     return (ok, err + 1)
 
 

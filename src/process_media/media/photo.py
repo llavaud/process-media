@@ -13,7 +13,6 @@ from PIL import Image, ImageOps
 from ..tools import ToolError, run, which
 from .base import MediaJob, job_runner
 
-
 logger = logging.getLogger("process_media.photo")
 
 # Register HEIF/HEIC support if pillow-heif is installed. It is an

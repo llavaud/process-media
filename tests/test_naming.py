@@ -144,9 +144,7 @@ def test_build_jobs_only_matches_format_type(tmp_path: Path) -> None:
     assert formats_by_source["v.mp4"] == "web_video"
 
 
-def test_build_jobs_video_quicktime_tzoffset_auto_local(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_build_jobs_video_quicktime_tzoffset_auto_local(tmp_path: Path, monkeypatch) -> None:
     """QuickTime stamps (UTC) get local-tz compensation when tzoffset=0.
 
     When no explicit ``--tzoffset`` is passed, ``QuickTime:CreateDate``

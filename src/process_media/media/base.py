@@ -7,10 +7,11 @@ These objects must be picklable to be shipped to ``ProcessPoolExecutor``.
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from functools import wraps
 from pathlib import Path
-from typing import TYPE_CHECKING, Callable, Literal
+from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
     from ..config import FormatSpec
@@ -26,7 +27,7 @@ class MediaJob:
     source: Path
     target: Path
     format_name: str
-    format_spec: "FormatSpec"
+    format_spec: FormatSpec
     media_type: MediaType
     overwrite: bool = False
     verbose: bool = False
@@ -43,7 +44,7 @@ class JobResult:
     skipped: bool = False
 
 
-def job_runner(func: Callable[["MediaJob"], None]) -> Callable[["MediaJob"], JobResult]:
+def job_runner(func: Callable[[MediaJob], None]) -> Callable[[MediaJob], JobResult]:
     """Wrap a job function with the common boilerplate.
 
     Responsibilities of the decorator:

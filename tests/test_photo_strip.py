@@ -8,15 +8,18 @@ from unittest.mock import patch
 from process_media.media import photo as photo_mod
 
 
-def _capture_exiftool_args(target: Path, source: Path, *, rotation_applied: bool, strip_exclude: list[str]):
+def _capture_exiftool_args(
+    target: Path, source: Path, *, rotation_applied: bool, strip_exclude: list[str]
+):
     captured: list[list[str]] = []
 
     def _fake_run(cmd, **_kwargs):
         captured.append(list(cmd))
         return None
 
-    with patch.object(photo_mod, "which", return_value="/usr/bin/exiftool"), patch.object(
-        photo_mod, "run", side_effect=_fake_run
+    with (
+        patch.object(photo_mod, "which", return_value="/usr/bin/exiftool"),
+        patch.object(photo_mod, "run", side_effect=_fake_run),
     ):
         photo_mod._strip_metadata(
             target=target,
@@ -52,9 +55,7 @@ def test_strip_forces_orientation_one_after_rotation(tmp_path: Path) -> None:
     target = tmp_path / "out.jpg"
     target.write_text("")
 
-    args = _capture_exiftool_args(
-        target, src, rotation_applied=True, strip_exclude=["orientation"]
-    )
+    args = _capture_exiftool_args(target, src, rotation_applied=True, strip_exclude=["orientation"])
     assert "-IFD0:Orientation#=1" in args
     # Must NOT re-import the (now stale) source Orientation tag.
     assert "-EXIF:Orientation" not in args
@@ -67,9 +68,7 @@ def test_strip_gps_unaffected_by_rotation_flag(tmp_path: Path) -> None:
     target = tmp_path / "out.jpg"
     target.write_text("")
 
-    args = _capture_exiftool_args(
-        target, src, rotation_applied=True, strip_exclude=["gps"]
-    )
+    args = _capture_exiftool_args(target, src, rotation_applied=True, strip_exclude=["gps"])
     assert "-GPS:all" in args
     assert str(src) in args
 
@@ -81,8 +80,6 @@ def test_strip_uses_atomic_overwrite(tmp_path: Path) -> None:
     target = tmp_path / "out.jpg"
     target.write_text("")
 
-    args = _capture_exiftool_args(
-        target, src, rotation_applied=False, strip_exclude=[]
-    )
+    args = _capture_exiftool_args(target, src, rotation_applied=False, strip_exclude=[])
     assert "-overwrite_original_in_place" in args
     assert "-all=" in args

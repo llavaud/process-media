@@ -14,7 +14,6 @@ from ..config import FormatSpec
 from ..tools import ToolError, probe_audio_codec, run, which
 from .base import MediaJob, job_runner
 
-
 logger = logging.getLogger("process_media.video")
 
 _THUMB_QUALITY = 90
@@ -128,9 +127,7 @@ def _build_vf(spec: FormatSpec) -> list[str]:
         # Scale longer edge to ``W`` while
         # preserving aspect ratio. Commas are escaped because they appear
         # inside the filter expression.
-        filters.append(
-            f"scale=iw*min(1\\,min({w}/iw\\,{w}/ih)):-1"
-        )
+        filters.append(f"scale=iw*min(1\\,min({w}/iw\\,{w}/ih)):-1")
     return filters
 
 
@@ -160,8 +157,10 @@ def _strip_metadata(ffmpeg: str, working: Path, spec: FormatSpec, verbose: bool)
         if spec.strip_exclude:
             with _tempfile(work_dir, suffix=".ffmeta", delete=False) as raw_meta:
                 extract_cmd = _ffmpeg_base(verbose) + [
-                    "-i", str(working),
-                    "-f", "ffmetadata",
+                    "-i",
+                    str(working),
+                    "-f",
+                    "ffmetadata",
                     str(raw_meta),
                 ]
                 run(extract_cmd)
@@ -174,12 +173,18 @@ def _strip_metadata(ffmpeg: str, working: Path, spec: FormatSpec, verbose: bool)
         # Step 2: strip every metadata tag from the video.
         with _tempfile(work_dir, suffix=".mp4") as stripped:
             strip_cmd = _ffmpeg_base(verbose) + [
-                "-i", str(working),
-                "-codec", "copy",
-                "-map_metadata", "-1",
-                "-map_metadata:s:v", "-1",
-                "-map_metadata:s:a", "-1",
-                "-f", "mp4",
+                "-i",
+                str(working),
+                "-codec",
+                "copy",
+                "-map_metadata",
+                "-1",
+                "-map_metadata:s:v",
+                "-1",
+                "-map_metadata:s:a",
+                "-1",
+                "-f",
+                "mp4",
                 str(stripped),
             ]
             run(strip_cmd)
@@ -189,11 +194,16 @@ def _strip_metadata(ffmpeg: str, working: Path, spec: FormatSpec, verbose: bool)
         if preserved_meta is not None:
             with _tempfile(work_dir, suffix=".mp4") as merged:
                 merge_cmd = _ffmpeg_base(verbose) + [
-                    "-i", str(working),
-                    "-i", str(preserved_meta),
-                    "-map_metadata", "1",
-                    "-codec", "copy",
-                    "-f", "mp4",
+                    "-i",
+                    str(working),
+                    "-i",
+                    str(preserved_meta),
+                    "-map_metadata",
+                    "1",
+                    "-codec",
+                    "copy",
+                    "-f",
+                    "mp4",
                     str(merged),
                 ]
                 run(merge_cmd)

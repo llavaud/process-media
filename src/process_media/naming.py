@@ -6,10 +6,10 @@ import logging
 import mimetypes
 import time
 from collections import defaultdict
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Iterable
 
 from .config import FormatSpec, GlobalOptions
 from .media.base import MediaJob, MediaType

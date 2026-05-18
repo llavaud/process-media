@@ -28,9 +28,7 @@ def _make_source(tmp_path: Path, size: tuple[int, int] = (200, 100)) -> Path:
     return src
 
 
-def _make_job(
-    *, source: Path, target: Path, spec: FormatSpec, overwrite: bool = False
-) -> MediaJob:
+def _make_job(*, source: Path, target: Path, spec: FormatSpec, overwrite: bool = False) -> MediaJob:
     return MediaJob(
         source=source,
         target=target,
@@ -90,9 +88,7 @@ def test_no_upscale_when_smaller_than_resize(tmp_path: Path) -> None:
 def test_progressive_jpeg_emitted_when_requested(tmp_path: Path) -> None:
     src = _make_source(tmp_path)
     target = tmp_path / "out" / "prog.jpg"
-    spec = FormatSpec(
-        type="photo", output_dir="out", compress=80, progressive=True
-    )
+    spec = FormatSpec(type="photo", output_dir="out", compress=80, progressive=True)
 
     photo_mod.process_photo(_make_job(source=src, target=target, spec=spec))
 

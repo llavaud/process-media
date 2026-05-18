@@ -1,10 +1,7 @@
 from __future__ import annotations
 
-from pathlib import Path
 from concurrent.futures import Future
 from types import SimpleNamespace
-
-import pytest
 
 from process_media.media.base import JobResult, MediaJob
 
@@ -54,7 +51,9 @@ def test_run_jobs_all_success(tmp_path, monkeypatch):
 
     jobs = [_make_job(tmp_path, f"f{i}.jpg") for i in range(3)]
     monkeypatch.setattr(runner, "ProcessPoolExecutor", InlineExecutor)
-    monkeypatch.setattr(runner, "_execute", lambda job: JobResult(job=job, success=True, duration=0.01))
+    monkeypatch.setattr(
+        runner, "_execute", lambda job: JobResult(job=job, success=True, duration=0.01)
+    )
     ok, err = runner.run_jobs(jobs, max_workers=2, batch=True)
     assert (ok, err) == (3, 0)
 
@@ -80,7 +79,9 @@ def test_run_jobs_skipped_counts_as_ok(tmp_path, monkeypatch):
 
     jobs = [_make_job(tmp_path)]
     monkeypatch.setattr(runner, "ProcessPoolExecutor", InlineExecutor)
-    monkeypatch.setattr(runner, "_execute", lambda job: JobResult(job=job, success=True, skipped=True, duration=0.0))
+    monkeypatch.setattr(
+        runner, "_execute", lambda job: JobResult(job=job, success=True, skipped=True, duration=0.0)
+    )
     ok, err = runner.run_jobs(jobs, max_workers=1, batch=True)
     assert (ok, err) == (1, 0)
 
@@ -95,7 +96,9 @@ def test_max_workers_capped_to_jobs_count(tmp_path, monkeypatch):
             captured["mw"] = max_workers
 
     monkeypatch.setattr(runner, "ProcessPoolExecutor", SpyExecutor)
-    monkeypatch.setattr(runner, "_execute", lambda job: JobResult(job=job, success=True, duration=0.0))
+    monkeypatch.setattr(
+        runner, "_execute", lambda job: JobResult(job=job, success=True, duration=0.0)
+    )
     jobs = [_make_job(tmp_path, f"f{i}.jpg") for i in range(2)]
     runner.run_jobs(jobs, max_workers=10, batch=True)
     assert captured["mw"] == 2

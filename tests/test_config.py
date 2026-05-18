@@ -8,7 +8,7 @@ import pytest
 import yaml
 from pydantic import ValidationError
 
-from process_media.config import Config, FormatSpec, GlobalOptions, load_config
+from process_media.config import FormatSpec, GlobalOptions, load_config
 
 
 def test_load_new_style(tmp_path: Path) -> None:
@@ -183,12 +183,7 @@ def test_config_rejects_unknown_root_key(tmp_path: Path) -> None:
 def test_load_config_from_env_var(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     p = tmp_path / "from-env.yaml"
     p.write_text(
-        "global:\n"
-        "  max_threads: 3\n"
-        "formats:\n"
-        "  fmt:\n"
-        "    type: photo\n"
-        "    output_dir: out\n"
+        "global:\n  max_threads: 3\nformats:\n  fmt:\n    type: photo\n    output_dir: out\n"
     )
     monkeypatch.setenv("PROCESS_MEDIA_CONFIG", str(p))
     # Use an isolated cwd so the cwd fallback can't accidentally match.
@@ -198,7 +193,9 @@ def test_load_config_from_env_var(tmp_path: Path, monkeypatch: pytest.MonkeyPatc
     assert "fmt" in c.formats
 
 
-def test_env_var_overridden_by_explicit_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_env_var_overridden_by_explicit_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     env_cfg = tmp_path / "env.yaml"
     env_cfg.write_text("global: {max_threads: 1}\nformats: {}\n")
     explicit_cfg = tmp_path / "explicit.yaml"
