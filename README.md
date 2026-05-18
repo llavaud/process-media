@@ -1,12 +1,10 @@
-# process-media (Python)
+# process-media
 
-Modern Python rewrite of the original Perl tool. Renames media files from
-their EXIF capture date and processes them through one or more named output
-formats (rotation, resize, JPEG quality, video reencoding, metadata stripping,
-thumbnail generation, integrity check).
+Renames media files from their EXIF capture date and processes them through
+one or more named output formats (rotation, resize, JPEG quality, video
+reencoding, metadata stripping, thumbnail generation, integrity check).
 
-The Python port targets Python 3.11+ and uses **system-installed** ffmpeg /
-exiftool — the bundled binaries from the original repo are no longer needed.
+Targets Python 3.11+ and uses **system-installed** ffmpeg / exiftool.
 
 ## Features
 
@@ -20,8 +18,9 @@ exiftool — the bundled binaries from the original repo are no longer needed.
   (`location*`, `rotate*`).
 - Parallel processing via `ProcessPoolExecutor`, Rich progress bar in
   interactive mode, clean SIGINT handling.
-- Pydantic v2 config with validation; supports the legacy two-document YAML
-  layout (with the `---` separator) and a new single-document layout.
+- Pydantic v2 config with validation; supports a single-document YAML
+  layout (recommended) and a two-document layout (global options + formats
+  separated by `---`).
 
 ## Installation
 
@@ -36,7 +35,8 @@ System tools (must be on `$PATH`):
 - `exiftool` (required for photo metadata stripping)
 - `jpeginfo` (optional, used for JPEG integrity check)
 
-On Debian/Ubuntu:
+On Debian/Ubuntu (the `exiftool` package is named `libimage-exiftool-perl`
+upstream — that's just how it's distributed, not a project dependency):
 
 ```bash
 sudo apt install ffmpeg libimage-exiftool-perl jpeginfo
@@ -106,8 +106,8 @@ formats:
     output_dir: web/videos
 ```
 
-The legacy two-document YAML format from the Perl version (global options in
-doc 1, formats in doc 2 separated by `---`) is still accepted.
+A two-document layout (global options in doc 1, formats in doc 2 separated
+by `---`) is also accepted.
 
 ### Format options
 

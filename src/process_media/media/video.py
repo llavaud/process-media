@@ -136,7 +136,7 @@ def _build_vf(spec: FormatSpec) -> list[str]:
         filters.extend(["transpose=1"] * count)
     if spec.resize is not None:
         w = spec.resize
-        # Identical to the Perl version: scale longer edge to ``W`` while
+        # Scale longer edge to ``W`` while
         # preserving aspect ratio. Commas are escaped because they appear
         # inside the filter expression.
         filters.append(

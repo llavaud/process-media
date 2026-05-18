@@ -37,8 +37,8 @@ logger = logging.getLogger("process_media.naming")
 PHOTO_EXTS = frozenset({".jpg", ".jpeg"})
 VIDEO_EXTS = frozenset({".mp4", ".mov", ".m4v", ".avi", ".mkv", ".webm", ".3gp"})
 
-# Output extensions are normalised. Mirrors the Perl behaviour where every
-# encoded video is muxed as MP4 regardless of source container.
+# Output extensions are normalised: every encoded video is muxed as MP4
+# regardless of source container, photos always go out as JPEG.
 PHOTO_OUTPUT_EXT = ".jpg"
 VIDEO_OUTPUT_EXT = ".mp4"
 
@@ -73,7 +73,7 @@ def _classify(path: Path) -> MediaType | None:
 def scan_media(path: Path) -> list[tuple[Path, MediaType]]:
     """Walk ``path`` (file or single directory, non-recursive) and classify.
 
-    Hidden files (leading dot) are skipped, matching the Perl behaviour.
+    Hidden files (leading dot) are skipped.
     """
     results: list[tuple[Path, MediaType]] = []
     if path.is_file():
@@ -98,8 +98,7 @@ def scan_media(path: Path) -> list[tuple[Path, MediaType]]:
 def exif_date_to_name(dt: datetime, tzoffset: int = 0) -> str:
     """Format a datetime as ``YYYYMMDD-HHMMSS`` after applying ``tzoffset``.
 
-    ``tzoffset`` is added (in seconds) to the input value before formatting,
-    mirroring the original Perl behaviour.
+    ``tzoffset`` is added (in seconds) to the input value before formatting.
     """
     if tzoffset:
         dt = dt + timedelta(seconds=tzoffset)
@@ -177,9 +176,9 @@ def batch_exif_dates(paths: list[Path]) -> dict[Path, ExifDate | None]:
 def _adjust_for_media(date: ExifDate, media_type: MediaType, tzoffset: int) -> datetime:
     """Apply the right timezone correction before formatting the name.
 
-    Matches the Perl behaviour: an explicit ``--tzoffset`` always wins; when
-    ``tzoffset == 0`` and the timestamp comes from QuickTime (UTC), the
-    local timezone offset is applied so the name reflects local time.
+    An explicit ``--tzoffset`` always wins; when ``tzoffset == 0`` and the
+    timestamp comes from QuickTime (UTC), the local timezone offset is
+    applied so the name reflects local time.
     """
     if tzoffset:
         return date.dt + timedelta(seconds=tzoffset)
@@ -258,8 +257,8 @@ def _dedupe_jobs(jobs: list[MediaJob]) -> list[MediaJob]:
     """Append ``-NNN`` suffixes when several sources collide on the same target.
 
     Numbering happens **per (media_type, target_path)** so photos and videos
-    don't share counters. ALL colliding jobs receive a suffix, matching the
-    Perl behaviour where every member of the duplicate group is renamed.
+    don't share counters. ALL colliding jobs receive a suffix so every
+    member of the duplicate group is renamed consistently.
     """
     groups: dict[tuple[MediaType, Path], list[MediaJob]] = defaultdict(list)
     for job in jobs:

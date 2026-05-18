@@ -17,8 +17,8 @@ from .base import JobResult, MediaJob, job_runner
 
 logger = logging.getLogger("process_media.photo")
 
-# Mapping from CW degrees (the convention used by the legacy Perl tool)
-# to Pillow rotate counter-clockwise.
+# Mapping from clockwise degrees (the configuration convention) to
+# Pillow's counter-clockwise rotate argument.
 _CW_TO_PIL = {"90": -90, "180": 180, "270": 90}
 
 

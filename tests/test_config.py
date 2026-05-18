@@ -48,8 +48,8 @@ def test_load_legacy_multidoc(tmp_path: Path) -> None:
     assert c.formats["b"].vcodec == "x264"
 
 
-def test_load_reference_legacy_yaml(tmp_path: Path) -> None:
-    """The historic two-document file from the Perl repo must still load."""
+def test_load_full_realistic_config(tmp_path: Path) -> None:
+    """End-to-end load of a realistic two-document YAML covering every option."""
     p = tmp_path / "process-media.yaml"
     p.write_text(
         "---\n"
@@ -72,6 +72,12 @@ def test_load_reference_legacy_yaml(tmp_path: Path) -> None:
         "  strip: true\n"
         "  strip_exclude: orientation\n"
         "  output_dir: web\n"
+        "archive_video:\n"
+        "  type: video\n"
+        "  rotate: auto\n"
+        "  reencode: true\n"
+        "  vcodec: x264\n"
+        "  output_dir: archive/videos\n"
         "web_video:\n"
         "  type: video\n"
         "  rotate: auto\n"
@@ -82,9 +88,29 @@ def test_load_reference_legacy_yaml(tmp_path: Path) -> None:
         "  output_dir: web/videos\n",
     )
     c = load_config(p)
-    assert {"archive_photo", "web_photo", "web_video"} <= set(c.formats)
-    assert c.formats["web_photo"].strip_exclude == ["orientation"]
-    assert c.formats["web_video"].thumbnail is True
+
+    assert c.global_options.max_threads == 0
+    assert c.global_options.verbose is False
+    assert c.global_options.keep_name is False
+    assert c.global_options.overwrite is False
+    assert c.global_options.tzoffset == 0
+
+    assert set(c.formats) == {"archive_photo", "web_photo", "archive_video", "web_video"}
+
+    web_photo = c.formats["web_photo"]
+    assert web_photo.resize == 1920
+    assert web_photo.compress == 90
+    assert web_photo.progressive is True
+    assert web_photo.strip is True
+    assert web_photo.strip_exclude == ["orientation"]
+
+    archive_video = c.formats["archive_video"]
+    assert archive_video.reencode is True
+    assert archive_video.vcodec == "x264"
+
+    web_video = c.formats["web_video"]
+    assert web_video.resize == 1024
+    assert web_video.thumbnail is True
 
 
 def test_invalid_rotate() -> None:

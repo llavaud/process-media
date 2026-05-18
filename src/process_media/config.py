@@ -2,11 +2,10 @@
 
 Two YAML layouts are accepted:
 
-* **Legacy** (Perl-compatible) multi-document YAML where the first
-  document holds the global options and the second holds the formats
-  dictionary.
-* **New** single-document YAML with explicit ``global:`` and
+* **Single-document** (recommended) with explicit ``global:`` and
   ``formats:`` top-level keys.
+* **Multi-document** where the first YAML document holds the global
+  options and the second holds the formats dictionary.
 """
 
 from __future__ import annotations
@@ -29,7 +28,7 @@ _OUTPUT_DIR_RE = re.compile(r"^[\w\-/.]+$")
 
 
 class GlobalOptions(BaseModel):
-    """Tool-wide options. Match the first YAML document of the legacy file."""
+    """Tool-wide options."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -43,8 +42,8 @@ class GlobalOptions(BaseModel):
 class FormatSpec(BaseModel):
     """One output flavour (e.g. ``web_photo``).
 
-    The pydantic model performs the same validation as the Perl
-    ``check_conf`` routine, but raises clean ``ValidationError`` messages.
+    Pydantic validates every field and raises clean ``ValidationError``
+    messages for invalid configurations.
     """
 
     model_config = ConfigDict(extra="forbid")

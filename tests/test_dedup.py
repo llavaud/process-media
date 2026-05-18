@@ -12,8 +12,8 @@ from process_media.naming import build_jobs
 def test_build_jobs_dedup_numbers_all_members_of_group(tmp_path: Path) -> None:
     """Three photos colliding on the same target -> all three get a suffix.
 
-    This matches the Perl ``search_duplicate`` semantics where every member
-    of the duplicate group is renumbered.
+    Every member of the duplicate group is renumbered so the user never
+    has to guess which original file an unsuffixed target came from.
     """
     files = []
     for name in ("a.jpg", "b.jpg", "c.jpg"):

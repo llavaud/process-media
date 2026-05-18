@@ -96,8 +96,8 @@ def _reset_tty() -> None:
     """Run ``stty sane`` when attached to a TTY.
 
     ffmpeg sometimes leaves the terminal in an odd state (echo off, raw mode)
-    after being interrupted. The Perl tool ran this after every ffmpeg call
-    and inside its SIGINT handler.
+    after being interrupted, so we restore a sane terminal mode at the end
+    of a run and inside the SIGINT handler.
     """
     if not sys.stdin.isatty():
         return

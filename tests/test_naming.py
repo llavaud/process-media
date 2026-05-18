@@ -126,12 +126,11 @@ def test_build_jobs_only_matches_format_type(tmp_path: Path) -> None:
 def test_build_jobs_video_quicktime_tzoffset_auto_local(
     tmp_path: Path, monkeypatch
 ) -> None:
-    """B1: QuickTime stamps (UTC) get local-tz compensation when tzoffset=0.
+    """QuickTime stamps (UTC) get local-tz compensation when tzoffset=0.
 
-    Mirrors the Perl ``Video.pm get_name`` semantics: when no explicit
-    ``--tzoffset`` is passed, ``QuickTime:CreateDate`` (stored in UTC) is
-    shifted to local time so the resulting filename matches what the user
-    expects from their wall clock.
+    When no explicit ``--tzoffset`` is passed, ``QuickTime:CreateDate``
+    (stored in UTC) is shifted to local time so the resulting filename
+    matches what the user expects from their wall clock.
     """
     import time as _time
 
