@@ -34,7 +34,7 @@ class ExifDate:
 logger = logging.getLogger("process_media.naming")
 
 
-PHOTO_EXTS = frozenset({".jpg", ".jpeg"})
+PHOTO_EXTS = frozenset({".jpg", ".jpeg", ".heic", ".heif"})
 VIDEO_EXTS = frozenset({".mp4", ".mov", ".m4v", ".avi", ".mkv", ".webm", ".3gp"})
 
 # Output extensions are normalised: every encoded video is muxed as MP4
@@ -70,10 +70,12 @@ def _classify(path: Path) -> MediaType | None:
     return None
 
 
-def scan_media(path: Path) -> list[tuple[Path, MediaType]]:
-    """Walk ``path`` (file or single directory, non-recursive) and classify.
+def scan_media(path: Path, *, recursive: bool = False) -> list[tuple[Path, MediaType]]:
+    """Walk ``path`` (file or directory) and classify supported media files.
 
-    Hidden files (leading dot) are skipped.
+    When ``recursive`` is true, descend into subdirectories. Hidden files
+    and directories (leading dot) are always skipped — including any
+    subtree rooted on a hidden directory.
     """
     results: list[tuple[Path, MediaType]] = []
     if path.is_file():
@@ -86,8 +88,18 @@ def scan_media(path: Path) -> list[tuple[Path, MediaType]]:
     if not path.is_dir():
         raise FileNotFoundError(f"{path} is neither a file nor a directory")
 
-    for entry in sorted(path.iterdir()):
-        if entry.name.startswith(".") or not entry.is_file():
+    if recursive:
+        entries = (
+            p
+            for p in path.rglob("*")
+            # Skip files whose any path segment (relative to root) is hidden.
+            if not any(part.startswith(".") for part in p.relative_to(path).parts)
+        )
+    else:
+        entries = (p for p in path.iterdir() if not p.name.startswith("."))
+
+    for entry in sorted(entries):
+        if not entry.is_file():
             continue
         kind = _classify(entry)
         if kind is not None:

@@ -116,6 +116,14 @@ def main(
             help="List the planned source -> target mappings without writing anything.",
         ),
     ] = False,
+    recursive: Annotated[
+        bool,
+        typer.Option(
+            "--recursive",
+            "-r",
+            help="Scan PATH recursively (descend into subdirectories).",
+        ),
+    ] = False,
 ) -> None:
     """Process media in PATH according to the configuration file."""
     _setup_logging(verbose)
@@ -165,7 +173,7 @@ def main(
         logger.error("%s", exc)
         raise typer.Exit(code=3)
 
-    files = scan_media(path)
+    files = scan_media(path, recursive=recursive)
     if not files:
         logger.warning("No supported media file found under %s", path)
         raise typer.Exit(code=0)

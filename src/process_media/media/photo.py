@@ -12,10 +12,21 @@ from pathlib import Path
 from PIL import Image, ImageOps
 
 from ..tools import ToolError, run, which
-from .base import JobResult, MediaJob, job_runner
+from .base import MediaJob, job_runner
 
 
 logger = logging.getLogger("process_media.photo")
+
+# Register HEIF/HEIC support if pillow-heif is installed. It is an
+# optional dependency (heavy native libheif requirement); when missing,
+# .heic/.heif files will raise an UnidentifiedImageError downstream and
+# the job will be reported as failed with a clear error message.
+try:
+    from pillow_heif import register_heif_opener  # type: ignore[import-not-found]
+
+    register_heif_opener()
+except ImportError:  # pragma: no cover - depends on optional install
+    pass
 
 # Mapping from clockwise degrees (the configuration convention) to
 # Pillow's counter-clockwise rotate argument.

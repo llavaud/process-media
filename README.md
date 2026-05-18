@@ -29,6 +29,12 @@ python -m venv .venv
 .venv/bin/pip install -e .
 ```
 
+For HEIC / HEIF (Apple) photo support, install the optional extra:
+
+```bash
+.venv/bin/pip install -e ".[heic]"
+```
+
 System tools (must be on `$PATH`):
 
 - `ffmpeg`, `ffprobe` (required for video formats)
@@ -61,9 +67,11 @@ Options (all optional, defaults from config):
 | `-v, --verbose`            | Verbose logging.                                           |
 | `-o, --overwrite`          | Overwrite existing targets.                                |
 | `-b, --batch`              | Don't prompt for confirmation.                             |
+| `-n, --dry-run`            | List `source -> target` mappings without writing anything. |
+| `-r, --recursive`          | Descend into subdirectories (hidden subtrees skipped).     |
 
-Config resolution order: `--config` > `./process-media.yaml` >
-`/etc/process-media.yaml`.
+Config resolution order: `--config` > `$PROCESS_MEDIA_CONFIG` >
+`./process-media.yaml` > `/etc/process-media.yaml`.
 
 ## Config
 

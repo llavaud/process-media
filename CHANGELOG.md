@@ -19,6 +19,7 @@ Python 3.11+ implementation. Highlights:
 - `ProcessPoolExecutor`-based parallel runner with Rich progress bar.
 - Typer-based CLI (`--type`, `--format`, `--config`, `--max-threads`,
   `--tzoffset`, `--keep-name`, `--verbose`, `--overwrite`, `--batch`,
-  `--dry-run`).
+  `--dry-run`, `--recursive`).
+- Optional HEIC / HEIF support via the `[heic]` extra (pillow-heif).
 - `PROCESS_MEDIA_CONFIG` environment variable for configuration path.
 - Docker image based on `python:3.12-slim`.

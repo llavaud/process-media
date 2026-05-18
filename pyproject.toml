@@ -1,7 +1,7 @@
 [project]
 name = "process-media"
 version = "2.0.0"
-description = "Process photos and videos - Python rewrite of process-media"
+description = "Rename and process photos and videos from their EXIF metadata"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 authors = [ { name="Laurent Lavaud" } ]
@@ -16,7 +16,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "pytest-cov", "ruff", "mypy"]
+# HEIC/HEIF photo support (Apple devices). Optional because libheif is
+# a heavy native dependency.
+heic = ["pillow-heif>=0.16"]
+dev = ["pytest>=8", "pytest-cov", "ruff", "mypy", "pillow-heif>=0.16"]
 
 [project.scripts]
 process-media = "process_media.cli:app"

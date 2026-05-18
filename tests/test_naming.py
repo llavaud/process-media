@@ -34,6 +34,7 @@ def test_fallback_name(tmp_path: Path) -> None:
 def test_scan_media_filters(tmp_path: Path) -> None:
     (tmp_path / "a.jpg").write_text("")
     (tmp_path / "B.JPEG").write_text("")
+    (tmp_path / "photo.heic").write_text("")
     (tmp_path / ".hidden.jpg").write_text("")
     (tmp_path / "clip.mp4").write_text("")
     (tmp_path / "note.txt").write_text("")
@@ -43,9 +44,29 @@ def test_scan_media_filters(tmp_path: Path) -> None:
     names = {p.name: t for p, t in res.items()}
     assert names.get("a.jpg") == "photo"
     assert names.get("B.JPEG") == "photo"
+    assert names.get("photo.heic") == "photo"
     assert names.get("clip.mp4") == "video"
     assert ".hidden.jpg" not in names
     assert "note.txt" not in names
+
+
+def test_scan_media_recursive(tmp_path: Path) -> None:
+    """``recursive=True`` walks subdirectories; hidden subtrees stay skipped."""
+    (tmp_path / "top.jpg").write_text("")
+    sub = tmp_path / "trip" / "day1"
+    sub.mkdir(parents=True)
+    (sub / "deep.jpg").write_text("")
+    (sub / "clip.mp4").write_text("")
+    hidden = tmp_path / ".cache"
+    hidden.mkdir()
+    (hidden / "ignored.jpg").write_text("")
+
+    # Non-recursive (default): only the top-level photo.
+    assert {p.name for p, _ in scan_media(tmp_path)} == {"top.jpg"}
+
+    # Recursive: everything except hidden subtree.
+    names = {p.name for p, _ in scan_media(tmp_path, recursive=True)}
+    assert names == {"top.jpg", "deep.jpg", "clip.mp4"}
 
 
 def test_scan_media_single_file(tmp_path: Path) -> None:
