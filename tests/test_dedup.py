@@ -6,25 +6,35 @@ from datetime import datetime
 from pathlib import Path
 
 from process_media.config import FormatSpec, GlobalOptions
-from process_media.naming import build_jobs, dedupe_targets
+from process_media.naming import build_jobs
 
 
-def test_dedupe_helper_per_media_type() -> None:
-    """``dedupe_targets`` numbers photos and videos independently."""
-    jobs = [
-        {"target_name": "X", "media_type": "photo"},
-        {"target_name": "X", "media_type": "photo"},
-        {"target_name": "X", "media_type": "video"},
-        {"target_name": "X", "media_type": "video"},
+def test_build_jobs_dedup_numbers_all_members_of_group(tmp_path: Path) -> None:
+    """Three photos colliding on the same target -> all three get a suffix.
+
+    This matches the Perl ``search_duplicate`` semantics where every member
+    of the duplicate group is renumbered.
+    """
+    files = []
+    for name in ("a.jpg", "b.jpg", "c.jpg"):
+        p = tmp_path / name
+        p.write_text("")
+        files.append((p, "photo"))
+    dt = datetime(2024, 5, 18, 12, 0, 0)
+    spec = FormatSpec(type="photo", output_dir="web")
+
+    jobs = build_jobs(
+        files=files,
+        formats={"web_photo": spec},
+        global_opts=GlobalOptions(),
+        exif_dates={f: dt for f, _ in files},
+    )
+    names = sorted(j.target.name for j in jobs)
+    assert names == [
+        "20240518-120000-001.jpg",
+        "20240518-120000-002.jpg",
+        "20240518-120000-003.jpg",
     ]
-    out = dedupe_targets(jobs)
-    # First entry of each media_type keeps its name (matches Perl semantics).
-    photos = [j for j in out if j["media_type"] == "photo"]
-    videos = [j for j in out if j["media_type"] == "video"]
-    assert photos[0]["target_name"] == "X"
-    assert photos[1]["target_name"] == "X-001"
-    assert videos[0]["target_name"] == "X"
-    assert videos[1]["target_name"] == "X-001"
 
 
 def test_build_jobs_dedup_two_photos_same_target(tmp_path: Path) -> None:

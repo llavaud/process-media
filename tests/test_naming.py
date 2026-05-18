@@ -7,6 +7,7 @@ from pathlib import Path
 
 from process_media.config import FormatSpec, GlobalOptions
 from process_media.naming import (
+    ExifDate,
     build_jobs,
     exif_date_to_name,
     fallback_name,
@@ -120,6 +121,76 @@ def test_build_jobs_only_matches_format_type(tmp_path: Path) -> None:
     formats_by_source = {j.source.name: j.format_name for j in jobs}
     assert formats_by_source["p.jpg"] == "web_photo"
     assert formats_by_source["v.mp4"] == "web_video"
+
+
+def test_build_jobs_video_quicktime_tzoffset_auto_local(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """B1: QuickTime stamps (UTC) get local-tz compensation when tzoffset=0.
+
+    Mirrors the Perl ``Video.pm get_name`` semantics: when no explicit
+    ``--tzoffset`` is passed, ``QuickTime:CreateDate`` (stored in UTC) is
+    shifted to local time so the resulting filename matches what the user
+    expects from their wall clock.
+    """
+    import time as _time
+
+    # Pretend we run on a UTC+2 machine (7200s east of UTC).
+    class _FakeTime:
+        tm_gmtoff = 7200
+
+    monkeypatch.setattr(_time, "localtime", lambda *a, **k: _FakeTime())
+
+    src = tmp_path / "clip.mp4"
+    src.write_text("")
+    spec = FormatSpec(type="video", output_dir="archive")
+
+    jobs = build_jobs(
+        files=[(src, "video")],
+        formats={"archive_video": spec},
+        global_opts=GlobalOptions(tzoffset=0),
+        exif_dates={
+            src: ExifDate(
+                dt=datetime(2024, 5, 18, 10, 0, 0),
+                tag="QuickTime:CreateDate",
+            )
+        },
+    )
+    # 10:00 UTC + 2h = 12:00 local.
+    assert jobs[0].target.name == "20240518-120000.mp4"
+
+
+def test_build_jobs_photo_exif_no_quicktime_shift(tmp_path: Path) -> None:
+    """Photos with EXIF tags never get the QuickTime auto-shift."""
+    src = tmp_path / "p.jpg"
+    src.write_text("")
+    spec = FormatSpec(type="photo", output_dir="web")
+    jobs = build_jobs(
+        files=[(src, "photo")],
+        formats={"web_photo": spec},
+        global_opts=GlobalOptions(tzoffset=0),
+        exif_dates={
+            src: ExifDate(
+                dt=datetime(2024, 5, 18, 12, 34, 56),
+                tag="EXIF:DateTimeOriginal",
+            )
+        },
+    )
+    assert jobs[0].target.name == "20240518-123456.jpg"
+
+
+def test_build_jobs_video_extension_normalised_to_mp4(tmp_path: Path) -> None:
+    """B2: videos always come out as ``.mp4`` regardless of source container."""
+    src = tmp_path / "clip.mkv"
+    src.write_text("")
+    spec = FormatSpec(type="video", output_dir="archive")
+    jobs = build_jobs(
+        files=[(src, "video")],
+        formats={"archive_video": spec},
+        global_opts=GlobalOptions(keep_name=True),
+        exif_dates={},
+    )
+    assert jobs[0].target.name == "clip.mp4"
 
 
 def test_build_jobs_absolute_output_dir(tmp_path: Path) -> None:

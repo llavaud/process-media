@@ -74,10 +74,15 @@ def process_photo(job: MediaJob) -> JobResult:
             _atomic_save(img, job.target, save_kwargs)
 
         if spec.strip:
+            # When rotation was applied (auto or forced), the pixels are
+            # already upright: re-importing the source Orientation would
+            # cause EXIF-aware viewers to rotate the image a second time.
+            rotation_applied = spec.rotate in {"auto", "90", "180", "270"}
             _strip_metadata(
                 target=job.target,
                 source=job.source,
                 strip_exclude=list(spec.strip_exclude),
+                rotation_applied=rotation_applied,
             )
 
         _integrity_check(job.target)
@@ -119,19 +124,37 @@ def _atomic_save(img: Image.Image, target: Path, save_kwargs: dict) -> None:
         raise
 
 
-def _strip_metadata(*, target: Path, source: Path, strip_exclude: list[str]) -> None:
-    """Wipe all metadata then re-import the explicitly excluded tags."""
+def _strip_metadata(
+    *,
+    target: Path,
+    source: Path,
+    strip_exclude: list[str],
+    rotation_applied: bool,
+) -> None:
+    """Wipe all metadata then re-import the explicitly excluded tags.
+
+    When ``rotation_applied`` is true, ``orientation`` in the exclude list
+    is honoured by forcing ``EXIF:Orientation=1`` instead of copying the
+    original (now incorrect) value from the source.
+    """
     exiftool = which("exiftool")
     if exiftool is None:
         logger.warning("exiftool unavailable; metadata stripping skipped on %s", target)
         return
 
-    args: list[str] = [exiftool, "-overwrite_original", "-all="]
+    # ``-overwrite_original_in_place`` writes via a tempfile + atomic rename.
+    args: list[str] = [exiftool, "-overwrite_original_in_place", "-all="]
     for tag in strip_exclude:
         if tag == "gps":
             args += ["-tagsfromfile", str(source), "-GPS:all"]
         elif tag == "orientation":
-            args += ["-tagsfromfile", str(source), "-EXIF:Orientation"]
+            if rotation_applied:
+                # Use ``#`` to force numeric interpretation: without it,
+                # exiftool treats ``=1`` as a string lookup and can write
+                # the wrong value (observed in exiftool 13.x).
+                args += ["-IFD0:Orientation#=1"]
+            else:
+                args += ["-tagsfromfile", str(source), "-EXIF:Orientation"]
     args.append(str(target))
     run(args)
 

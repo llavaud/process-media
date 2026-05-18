@@ -4,13 +4,31 @@ from __future__ import annotations
 
 import logging
 import mimetypes
+import time
 from collections import defaultdict
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Iterable, Literal
+from typing import Iterable
 
 from .config import FormatSpec, GlobalOptions
 from .media.base import MediaJob, MediaType
+
+
+@dataclass(frozen=True)
+class ExifDate:
+    """A creation date parsed from EXIF, with the tag it came from.
+
+    Knowing the originating tag lets us apply the right timezone correction
+    for video files whose ``QuickTime:CreateDate`` is stored in UTC.
+    """
+
+    dt: datetime
+    tag: str
+
+    @property
+    def is_quicktime(self) -> bool:
+        return self.tag.startswith("QuickTime:")
 
 
 logger = logging.getLogger("process_media.naming")
@@ -19,8 +37,10 @@ logger = logging.getLogger("process_media.naming")
 PHOTO_EXTS = frozenset({".jpg", ".jpeg"})
 VIDEO_EXTS = frozenset({".mp4", ".mov", ".m4v", ".avi", ".mkv", ".webm", ".3gp"})
 
-# Photos are normalised to ``.jpg``; videos keep their container.
+# Output extensions are normalised. Mirrors the Perl behaviour where every
+# encoded video is muxed as MP4 regardless of source container.
 PHOTO_OUTPUT_EXT = ".jpg"
+VIDEO_OUTPUT_EXT = ".mp4"
 
 # EXIF tags we look at, in order. ``QuickTime:CreateDate`` covers videos.
 _DATE_TAGS = (
@@ -105,11 +125,13 @@ def _parse_exif_timestamp(value: str) -> datetime | None:
             return None
 
 
-def batch_exif_dates(paths: list[Path]) -> dict[Path, datetime | None]:
+def batch_exif_dates(paths: list[Path]) -> dict[Path, ExifDate | None]:
     """Read creation dates for ``paths`` using a single ``exiftool`` process.
 
     Falls back to ``DateTimeOriginal`` → ``EXIF:CreateDate`` →
     ``QuickTime:CreateDate``. Returns ``None`` per file when no usable tag.
+    The returned :class:`ExifDate` carries the tag it was read from, which
+    is required to apply timezone compensation for QuickTime stamps.
     """
     if not paths:
         return {}
@@ -118,26 +140,54 @@ def batch_exif_dates(paths: list[Path]) -> dict[Path, datetime | None]:
     # don't go through the full pipeline.
     from exiftool import ExifToolHelper
 
-    out: dict[Path, datetime | None] = {p: None for p in paths}
+    # Index by resolved path so we can match ExifTool's SourceFile reliably.
+    by_resolved: dict[Path, Path] = {p.resolve(): p for p in paths}
+    out: dict[Path, ExifDate | None] = {p: None for p in paths}
+
     with ExifToolHelper() as et:
         records = et.get_tags([str(p) for p in paths], tags=list(_DATE_TAGS))
 
     for record in records:
-        src = Path(record.get("SourceFile", ""))
-        if src not in out:
-            # ExifTool may return absolute/relative paths; try resolving.
+        raw_src = record.get("SourceFile", "")
+        if not raw_src:
+            continue
+        try:
+            resolved = Path(raw_src).resolve()
+        except OSError:
+            resolved = Path(raw_src)
+        src = by_resolved.get(resolved)
+        if src is None:
+            # Fallback: match by name within the original set.
             for p in paths:
-                if p.resolve() == src.resolve():
+                if p.name == Path(raw_src).name:
                     src = p
                     break
+        if src is None:
+            continue
         for tag in _DATE_TAGS:
             value = record.get(tag)
             if value:
                 dt = _parse_exif_timestamp(str(value))
                 if dt is not None:
-                    out[src] = dt
+                    out[src] = ExifDate(dt=dt, tag=tag)
                     break
     return out
+
+
+def _adjust_for_media(date: ExifDate, media_type: MediaType, tzoffset: int) -> datetime:
+    """Apply the right timezone correction before formatting the name.
+
+    Matches the Perl behaviour: an explicit ``--tzoffset`` always wins; when
+    ``tzoffset == 0`` and the timestamp comes from QuickTime (UTC), the
+    local timezone offset is applied so the name reflects local time.
+    """
+    if tzoffset:
+        return date.dt + timedelta(seconds=tzoffset)
+    if media_type == "video" and date.is_quicktime:
+        local_offset = time.localtime().tm_gmtoff
+        if local_offset:
+            return date.dt + timedelta(seconds=local_offset)
+    return date.dt
 
 
 def _resolve_output_dir(source: Path, spec: FormatSpec, format_name: str) -> Path:
@@ -157,24 +207,35 @@ def _resolve_output_dir(source: Path, spec: FormatSpec, format_name: str) -> Pat
 def _target_extension(media_type: MediaType, source: Path) -> str:
     if media_type == "photo":
         return PHOTO_OUTPUT_EXT
-    return source.suffix.lower()
+    # Videos always go out as MP4 — the ffmpeg pipeline muxes ``-f mp4``.
+    return VIDEO_OUTPUT_EXT
 
 
 def build_jobs(
     files: Iterable[tuple[Path, MediaType]],
     formats: dict[str, FormatSpec],
     global_opts: GlobalOptions,
-    exif_dates: dict[Path, datetime | None],
+    exif_dates: dict[Path, ExifDate | datetime | None],
 ) -> list[MediaJob]:
-    """Build the full ``MediaJob`` list (cartesian product, deduped)."""
+    """Build the full ``MediaJob`` list (cartesian product, deduped).
+
+    ``exif_dates`` accepts either :class:`ExifDate` (preferred, carries the
+    tag origin for timezone handling) or a bare :class:`datetime` for
+    backward compatibility with tests.
+    """
     jobs: list[MediaJob] = []
     for source, media_type in files:
         for fname, spec in formats.items():
             if spec.type != media_type:
                 continue
-            dt = exif_dates.get(source)
-            if not global_opts.keep_name and dt is not None:
-                base = exif_date_to_name(dt, tzoffset=global_opts.tzoffset)
+            entry = exif_dates.get(source)
+            if not global_opts.keep_name and entry is not None:
+                if isinstance(entry, ExifDate):
+                    adjusted = _adjust_for_media(entry, media_type, global_opts.tzoffset)
+                else:
+                    # Bare datetime: apply only the explicit tzoffset.
+                    adjusted = entry + timedelta(seconds=global_opts.tzoffset)
+                base = adjusted.strftime("%Y%m%d-%H%M%S")
             else:
                 base = fallback_name(source)
             ext = _target_extension(media_type, source)
@@ -212,29 +273,3 @@ def _dedupe_jobs(jobs: list[MediaJob]) -> list[MediaJob]:
             ext = target.suffix
             job.target = target.with_name(f"{stem}-{index:03d}{ext}")
     return jobs
-
-
-# ---------------------------------------------------------------------------
-# Backwards-compatible helper used by unit tests written before the refactor.
-# ---------------------------------------------------------------------------
-
-
-def dedupe_targets(items: list[dict]) -> list[dict]:
-    """Apply suffixing to a list of plain dicts (testing helper).
-
-    Each item must hold ``target_name`` and ``media_type``. The first
-    occurrence within a group keeps its name, the following ones get
-    ``-001``, ``-002`` … This mirrors how the Perl ``search_duplicate``
-    iterates the duplicate hash.
-    """
-    groups: dict[tuple[str, str], list[dict]] = defaultdict(list)
-    for item in items:
-        groups[(item["media_type"], item["target_name"])].append(item)
-
-    for (_mt, _name), group in groups.items():
-        if len(group) <= 1:
-            continue
-        # Skip the first entry, suffix the rest 001, 002, ...
-        for idx, item in enumerate(group[1:], start=1):
-            item["target_name"] = f"{item['target_name']}-{idx:03d}"
-    return items

@@ -5,9 +5,13 @@ from __future__ import annotations
 import logging
 import os
 import signal
+import subprocess
+import sys
+import traceback
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from typing import Callable
 
+from rich.logging import RichHandler
 from rich.progress import (
     BarColumn,
     MofNCompleteColumn,
@@ -31,6 +35,33 @@ _DISPATCH: dict[str, Callable[[MediaJob], JobResult]] = {
 }
 
 
+def _worker_init(log_level: int) -> None:
+    """Configure logging inside each worker process.
+
+    ``ProcessPoolExecutor`` spawns fresh interpreters (or forks before the
+    main process configured logging on some platforms), so warnings and
+    exception tracebacks emitted from worker code would otherwise be lost.
+    """
+    # Ignore SIGINT in workers: the main process orchestrates cancellation
+    # by killing children explicitly. Without this, every worker would
+    # raise KeyboardInterrupt and pollute the logs.
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+
+    root = logging.getLogger()
+    # Reset any inherited config (Linux fork).
+    for h in list(root.handlers):
+        root.removeHandler(h)
+    handler = RichHandler(
+        rich_tracebacks=True,
+        show_path=False,
+        show_time=False,
+        markup=False,
+    )
+    handler.setLevel(log_level)
+    root.addHandler(handler)
+    root.setLevel(log_level)
+
+
 def _execute(job: MediaJob) -> JobResult:
     """Worker entry point: must live at module level so it's picklable."""
     handler = _DISPATCH.get(job.media_type)
@@ -40,7 +71,50 @@ def _execute(job: MediaJob) -> JobResult:
             success=False,
             error=f"unknown media_type {job.media_type!r}",
         )
-    return handler(job)
+    try:
+        return handler(job)
+    except Exception as exc:  # pragma: no cover - defensive
+        # Bake the traceback into the result so it survives pickling back
+        # to the parent. ``logger.exception`` in the worker also emits it.
+        logging.getLogger("process_media.worker").exception(
+            "Unhandled error in %s job for %s", job.media_type, job.source
+        )
+        return JobResult(
+            job=job,
+            success=False,
+            error=f"{exc}\n{traceback.format_exc()}",
+        )
+
+
+def _kill_pool(executor: ProcessPoolExecutor) -> None:
+    """Forcefully terminate all worker processes (and their ffmpeg children)."""
+    procs = getattr(executor, "_processes", None) or {}
+    for proc in list(procs.values()):
+        try:
+            # SIGTERM the worker; subprocess.run() inside it has the ffmpeg
+            # child in the same process group, which receives SIGTERM too
+            # on Linux thanks to ``start_new_session=False`` (the default).
+            os.kill(proc.pid, signal.SIGTERM)
+        except (ProcessLookupError, PermissionError):
+            pass
+
+
+def _reset_tty() -> None:
+    """Run ``stty sane`` when attached to a TTY.
+
+    ffmpeg sometimes leaves the terminal in an odd state (echo off, raw mode)
+    after being interrupted. The Perl tool ran this after every ffmpeg call
+    and inside its SIGINT handler.
+    """
+    if not sys.stdin.isatty():
+        return
+    try:
+        subprocess.run(
+            ["stty", "sane"], check=False, stdin=None, stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL, timeout=2,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        pass
 
 
 def run_jobs(
@@ -60,15 +134,30 @@ def run_jobs(
     ok = 0
     err = 0
 
-    executor = ProcessPoolExecutor(max_workers=max_workers)
+    log_level = logging.getLogger().getEffectiveLevel()
+    executor = ProcessPoolExecutor(
+        max_workers=max_workers,
+        initializer=_worker_init,
+        initargs=(log_level,),
+    )
     previous_handler = signal.getsignal(signal.SIGINT)
+    interrupted = False
 
     def _on_sigint(_signum, _frame) -> None:
-        logger.warning("Interrupted by user, cancelling pending jobs…")
-        executor.shutdown(wait=False, cancel_futures=True)
-        # Restore previous handler so a second Ctrl+C kills the process.
-        signal.signal(signal.SIGINT, previous_handler)
-        raise KeyboardInterrupt
+        nonlocal interrupted
+        if interrupted:
+            # Second Ctrl+C: restore default and let it propagate.
+            signal.signal(signal.SIGINT, signal.SIG_DFL)
+            os.kill(os.getpid(), signal.SIGINT)
+            return
+        interrupted = True
+        logger.warning("Interrupted by user, terminating workers…")
+        _kill_pool(executor)
+        # cancel pending tasks (won't touch running ones, but we just killed those)
+        try:
+            executor.shutdown(wait=False, cancel_futures=True)
+        except Exception:
+            pass
 
     signal.signal(signal.SIGINT, _on_sigint)
 
@@ -85,8 +174,12 @@ def run_jobs(
                     ok, err = _collect(future, futures[future], ok, err)
                     progress.advance(task)
     finally:
-        executor.shutdown(wait=True)
         signal.signal(signal.SIGINT, previous_handler)
+        # If we were interrupted, workers are gone — don't wait.
+        executor.shutdown(wait=not interrupted)
+        _reset_tty()
+        if interrupted:
+            raise KeyboardInterrupt
 
     return (ok, err)
 
