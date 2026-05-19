@@ -151,7 +151,8 @@ def test_failure_leaves_no_tempfile_behind(tmp_path: Path) -> None:
         result = photo_mod.process_photo(_make_job(source=src, target=target, spec=spec))
 
     assert not result.success
-    assert result.error and "boom" in result.error
+    assert result.error is not None
+    assert "boom" in result.error
     # Target was never written.
     assert not target.exists()
     # No leftover temp files in the output directory.

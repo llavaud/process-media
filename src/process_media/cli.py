@@ -4,41 +4,83 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Annotated, cast
+from typing import Annotated
 
 import typer
-from rich.logging import RichHandler
+import yaml
+from pydantic import ValidationError
 from rich.prompt import Confirm
 
-from .config import FormatSpec, resolve_and_load_config
-from .media.base import MediaType
-from .naming import batch_exif_dates, build_jobs, scan_media
+from .config import Config, FormatSpec, resolve_and_load_config
+from .logging_setup import setup_logging
+from .media.base import MediaJob, MediaType
+from .naming import ExifDate, batch_exif_dates, build_jobs, scan_media
 from .runner import run_jobs
-from .tools import ensure_tools
+from .tools import ToolError, ensure_tools
 
 logger = logging.getLogger("process_media")
 app = typer.Typer(add_completion=False, help="Process photos and videos.")
 
 
 def _setup_logging(verbose: bool) -> None:
-    level = logging.DEBUG if verbose else logging.INFO
-    # Reset handlers so calling _setup_logging twice doesn't duplicate output.
-    root = logging.getLogger()
-    for h in list(root.handlers):
-        root.removeHandler(h)
-    handler = RichHandler(rich_tracebacks=True, show_path=False)
-    logging.basicConfig(
-        level=level,
-        format="%(message)s",
-        datefmt="%H:%M:%S",
-        handlers=[handler],
-    )
+    setup_logging(logging.DEBUG if verbose else logging.INFO)
 
 
 def _split_csv(value: str | None) -> set[str]:
     if not value:
         return set()
     return {item.strip() for item in value.split(",") if item.strip()}
+
+
+def _load_config(config_path: Path | None, source_path: Path) -> tuple[Config, Path]:
+    """Resolve and parse the YAML configuration, turning errors into ``Exit``."""
+    try:
+        return resolve_and_load_config(config_path, source_path=source_path)
+    except FileNotFoundError as exc:
+        logger.error("%s", exc)
+        raise typer.Exit(code=2) from exc
+    except (ValidationError, yaml.YAMLError) as exc:
+        logger.error("Invalid configuration: %s", exc)
+        raise typer.Exit(code=2) from exc
+
+
+def _select_formats(
+    cfg: Config,
+    wanted_types: set[MediaType],
+    wanted_formats: set[str],
+) -> dict[str, FormatSpec]:
+    """Keep only the formats matching the ``--type`` / ``--format`` selection."""
+    formats = {
+        name: spec
+        for name, spec in cfg.formats.items()
+        if spec.type in wanted_types and (not wanted_formats or name in wanted_formats)
+    }
+    if not formats:
+        logger.error("No format matches the requested --type/--format selection.")
+        raise typer.Exit(code=2)
+    return formats
+
+
+def _collect_exif_dates(
+    files: list[tuple[Path, MediaType]],
+    *,
+    keep_name: bool,
+    dry_run: bool,
+) -> dict[Path, ExifDate | None]:
+    """Run the EXIF batch unless we can short-circuit (keep-name or dry-run)."""
+    if keep_name or dry_run:
+        return {}
+    try:
+        return batch_exif_dates([p for p, _ in files])
+    except OSError as exc:
+        logger.warning("EXIF extraction failed (%s); falling back to original names.", exc)
+        return {}
+
+
+def _emit_dry_run(jobs: list[MediaJob]) -> None:
+    for job in jobs:
+        logger.info("[dry-run] [%s] %s -> %s", job.format_name, job.source, job.target)
+    logger.info("Dry-run complete: %d job(s) would run, nothing was written.", len(jobs))
 
 
 @app.command()
@@ -126,15 +168,7 @@ def main(
     """Process media in PATH according to the configuration file."""
     _setup_logging(verbose)
 
-    try:
-        cfg, cfg_source = resolve_and_load_config(config_path, source_path=path)
-    except FileNotFoundError as exc:
-        logger.error("%s", exc)
-        raise typer.Exit(code=2) from exc
-    except Exception as exc:  # ValidationError, yaml errors…
-        logger.error("Invalid configuration: %s", exc)
-        raise typer.Exit(code=2) from exc
-
+    cfg, cfg_source = _load_config(config_path, path)
     logger.info("Loaded configuration from %s", cfg_source)
 
     # CLI overrides take precedence over the config file.
@@ -152,17 +186,13 @@ def main(
     # Re-apply log level in case the config bumped verbose.
     _setup_logging(cfg.global_options.verbose)
 
-    wanted_types: set[str] = _split_csv(type_filter) or {"photo", "video"}
+    raw_types = _split_csv(type_filter) or {"photo", "video"}
+    # Narrow to the ``MediaType`` literal so downstream calls (build_jobs,
+    # filtering) keep precise typing.
+    wanted_types: set[MediaType] = {t for t in ("photo", "video") if t in raw_types}
     wanted_formats = _split_csv(format_filter)
 
-    formats: dict[str, FormatSpec] = {
-        name: spec
-        for name, spec in cfg.formats.items()
-        if spec.type in wanted_types and (not wanted_formats or name in wanted_formats)
-    }
-    if not formats:
-        logger.error("No format matches the requested --type/--format selection.")
-        raise typer.Exit(code=2)
+    formats = _select_formats(cfg, wanted_types, wanted_formats)
 
     # In dry-run mode we never touch the disk, so we don't enforce the
     # presence of ffmpeg/exiftool. A user can preview a plan on a machine
@@ -172,41 +202,33 @@ def main(
         needs_exiftool = any(spec.type == "photo" for spec in formats.values())
         try:
             ensure_tools(needs_ffmpeg=needs_ffmpeg, needs_exiftool=needs_exiftool)
-        except RuntimeError as exc:
+        except ToolError as exc:
             logger.error("%s", exc)
             raise typer.Exit(code=3) from exc
 
-    files = scan_media(path, recursive=recursive)
+    files: list[tuple[Path, MediaType]] = scan_media(path, recursive=recursive)
     if not files:
         logger.warning("No supported media file found under %s", path)
         raise typer.Exit(code=0)
 
-    files = cast(
-        "list[tuple[Path, MediaType]]",
-        [(p, mt) for p, mt in files if mt in wanted_types],
-    )
+    files = [(p, mt) for p, mt in files if mt in wanted_types]
     if not files:
         logger.warning("No file matched the --type filter.")
         raise typer.Exit(code=0)
 
     logger.info("Found %d media file(s) under %s", len(files), path)
 
-    exif_dates: dict = {}
-    # Skip the (potentially slow) EXIF batch in dry-run too: target names
-    # will fall back to source stems, which is good enough for previewing.
-    if not cfg.global_options.keep_name and not dry_run:
-        try:
-            exif_dates = batch_exif_dates([p for p, _ in files])
-        except Exception as exc:
-            logger.warning("EXIF extraction failed (%s); falling back to original names.", exc)
+    exif_dates = _collect_exif_dates(
+        files,
+        keep_name=cfg.global_options.keep_name,
+        dry_run=dry_run,
+    )
 
     jobs = build_jobs(files, formats, cfg.global_options, exif_dates)
     logger.info("Built %d job(s) across %d format(s).", len(jobs), len(formats))
 
     if dry_run:
-        for job in jobs:
-            logger.info("[dry-run] [%s] %s -> %s", job.format_name, job.source, job.target)
-        logger.info("Dry-run complete: %d job(s) would run, nothing was written.", len(jobs))
+        _emit_dry_run(jobs)
         raise typer.Exit(code=0)
 
     if not batch:
@@ -223,7 +245,3 @@ def main(
     logger.info("Finished: %d ok, %d error(s)", ok, err)
     if err:
         raise typer.Exit(code=1)
-
-
-if __name__ == "__main__":  # pragma: no cover
-    app()

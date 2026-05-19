@@ -7,6 +7,7 @@ import os
 import shutil
 import tempfile
 from pathlib import Path
+from typing import Any
 
 from PIL import Image, ImageOps
 
@@ -57,7 +58,7 @@ def process_photo(job: MediaJob) -> None:
                 resample=Image.Resampling.LANCZOS,
             )
 
-        save_kwargs: dict = {
+        save_kwargs: dict[str, Any] = {
             "format": "JPEG",
             "optimize": True,
             "progressive": bool(spec.progressive),
@@ -96,7 +97,7 @@ def _apply_rotation(img: Image.Image, rotate: str) -> Image.Image:
     return img.rotate(angle, expand=True)
 
 
-def _atomic_save(img: Image.Image, target: Path, save_kwargs: dict) -> None:
+def _atomic_save(img: Image.Image, target: Path, save_kwargs: dict[str, Any]) -> None:
     fd, tmp = tempfile.mkstemp(
         dir=str(target.parent),
         prefix=".process-media_",
@@ -106,7 +107,7 @@ def _atomic_save(img: Image.Image, target: Path, save_kwargs: dict) -> None:
     tmp_path = Path(tmp)
     try:
         img.save(tmp_path, **save_kwargs)
-        os.replace(tmp_path, target)
+        tmp_path.replace(target)
     except Exception:
         tmp_path.unlink(missing_ok=True)
         raise

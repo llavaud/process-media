@@ -1,7 +1,11 @@
+"""Entry point for ``python -m process_media``."""
+
+from __future__ import annotations
+
 from .cli import app
 
 
-def main():
+def main() -> None:
     app()
 
 

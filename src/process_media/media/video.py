@@ -6,6 +6,8 @@ import logging
 import os
 import shutil
 import tempfile
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 from PIL import Image
@@ -41,7 +43,7 @@ def process_video(job: MediaJob) -> None:
         # ``shutil.copy2`` cannot leave a half-written target.
         with _tempfile(job.target.parent, suffix=".mp4") as tmp:
             shutil.copy2(job.source, tmp)
-            os.replace(tmp, job.target)
+            tmp.replace(job.target)
     else:
         # Pipeline: build the new file in ``working``, swap to ``job.target``
         # only when every step succeeded.
@@ -51,12 +53,12 @@ def process_video(job: MediaJob) -> None:
                 _reencode(ffmpeg, working, spec, job.verbose)
             if spec.strip:
                 _strip_metadata(ffmpeg, working, spec, job.verbose)
-            os.replace(working, job.target)
+            working.replace(job.target)
 
     if spec.thumbnail:
         _generate_thumbnail(ffmpeg, job)
 
-    _integrity_check(ffmpeg, job.target)
+    _integrity_check(job.target)
 
 
 # ---------------------------------------------------------------------------
@@ -109,7 +111,7 @@ def _reencode(ffmpeg: str, working: Path, spec: FormatSpec, verbose: bool) -> No
     with _tempfile(working.parent, suffix=".mp4") as tmp:
         cmd += ["-flags", "+global_header", "-f", "mp4", str(tmp)]
         run(cmd)
-        os.replace(tmp, working)
+        tmp.replace(working)
 
 
 def _ffmpeg_base(verbose: bool) -> list[str]:
@@ -124,10 +126,12 @@ def _build_vf(spec: FormatSpec) -> list[str]:
         filters.extend(["transpose=1"] * count)
     if spec.resize is not None:
         w = spec.resize
-        # Scale longer edge to ``W`` while
-        # preserving aspect ratio. Commas are escaped because they appear
-        # inside the filter expression.
-        filters.append(f"scale=iw*min(1\\,min({w}/iw\\,{w}/ih)):-1")
+        # Scale longer edge to ``W`` while preserving aspect ratio.
+        # Commas are escaped because they appear inside the filter
+        # expression. ``-2`` (instead of ``-1``) forces the computed
+        # height to be divisible by 2 — required by yuv420p encoders
+        # like libx264/libx265, which reject odd dimensions.
+        filters.append(f"scale=iw*min(1\\,min({w}/iw\\,{w}/ih)):-2")
     return filters
 
 
@@ -156,7 +160,8 @@ def _strip_metadata(ffmpeg: str, working: Path, spec: FormatSpec, verbose: bool)
     try:
         if spec.strip_exclude:
             with _tempfile(work_dir, suffix=".ffmeta", delete=False) as raw_meta:
-                extract_cmd = _ffmpeg_base(verbose) + [
+                extract_cmd = [
+                    *_ffmpeg_base(verbose),
                     "-i",
                     str(working),
                     "-f",
@@ -172,7 +177,8 @@ def _strip_metadata(ffmpeg: str, working: Path, spec: FormatSpec, verbose: bool)
 
         # Step 2: strip every metadata tag from the video.
         with _tempfile(work_dir, suffix=".mp4") as stripped:
-            strip_cmd = _ffmpeg_base(verbose) + [
+            strip_cmd = [
+                *_ffmpeg_base(verbose),
                 "-i",
                 str(working),
                 "-codec",
@@ -188,12 +194,13 @@ def _strip_metadata(ffmpeg: str, working: Path, spec: FormatSpec, verbose: bool)
                 str(stripped),
             ]
             run(strip_cmd)
-            os.replace(stripped, working)
+            stripped.replace(working)
 
         # Step 3: re-inject the preserved metadata, if any.
         if preserved_meta is not None:
             with _tempfile(work_dir, suffix=".mp4") as merged:
-                merge_cmd = _ffmpeg_base(verbose) + [
+                merge_cmd = [
+                    *_ffmpeg_base(verbose),
                     "-i",
                     str(working),
                     "-i",
@@ -207,7 +214,7 @@ def _strip_metadata(ffmpeg: str, working: Path, spec: FormatSpec, verbose: bool)
                     str(merged),
                 ]
                 run(merge_cmd)
-                os.replace(merged, working)
+                merged.replace(working)
     finally:
         if preserved_meta is not None:
             preserved_meta.unlink(missing_ok=True)
@@ -248,7 +255,7 @@ def _filter_ffmetadata(raw_path: Path, keep: set[str]) -> Path:
 
 def _generate_thumbnail(ffmpeg: str, job: MediaJob) -> None:
     thumb = job.target.with_suffix(".jpg")
-    cmd = _ffmpeg_base(job.verbose) + ["-i", str(job.target), "-vframes", "1", str(thumb)]
+    cmd = [*_ffmpeg_base(job.verbose), "-i", str(job.target), "-vframes", "1", str(thumb)]
     run(cmd)
     # Re-save with Pillow to drop ancillary chunks and force progressive JPEG.
     try:
@@ -270,12 +277,34 @@ def _generate_thumbnail(ffmpeg: str, job: MediaJob) -> None:
 # ---------------------------------------------------------------------------
 
 
-def _integrity_check(ffmpeg: str, target: Path) -> None:
-    cmd = _ffmpeg_base(False) + ["-i", str(target), "-f", "null", "-"]
+def _integrity_check(target: Path) -> None:
+    """Verify the produced file has a readable structure.
+
+    We prefer ``ffprobe`` because the equivalent ffmpeg null-mux check
+    (``-f null -``) decodes every frame, which on large videos can
+    dominate the runtime of a pipeline that only copied streams. ffprobe
+    parses the container and per-stream headers — sufficient to catch
+    truncated/corrupt outputs without paying the full-decode cost.
+    """
+    ffprobe = which("ffprobe")
+    if ffprobe is None:
+        # ffprobe ships with ffmpeg; if it's missing we silently skip
+        # rather than fail the whole job for a best-effort sanity check.
+        return
+    cmd = [
+        ffprobe,
+        "-v",
+        "error",
+        "-show_entries",
+        "stream=codec_type",
+        "-of",
+        "csv=p=0",
+        str(target),
+    ]
     try:
         run(cmd)
     except ToolError as exc:
-        logger.warning("ffmpeg integrity check failed on %s: %s", target, exc)
+        logger.warning("ffprobe integrity check failed on %s: %s", target, exc)
 
 
 # ---------------------------------------------------------------------------
@@ -283,39 +312,31 @@ def _integrity_check(ffmpeg: str, target: Path) -> None:
 # ---------------------------------------------------------------------------
 
 
-class _tempfile:
-    """Context manager yielding a unique temp ``Path`` next to the target.
+@contextmanager
+def _tempfile(directory: Path, *, suffix: str, delete: bool = True) -> Iterator[Path]:
+    """Yield a unique temp path next to ``directory``.
 
-    The file is deleted on exit unless ``delete=False``. We don't keep the
-    underlying file handle open: ffmpeg refuses to write to an open file
-    on some platforms.
+    We deliberately use :func:`tempfile.mkstemp` (rather than
+    :class:`tempfile.NamedTemporaryFile`) and immediately close the fd:
+    ffmpeg refuses to write to a file still held open by another process
+    on some platforms. The naming prefix (``process-media_tmp.``) is also
+    relied on by :func:`runner._clean_stale_tempfiles` to clean up leftovers
+    from previous hard kills.
     """
-
-    def __init__(self, directory: Path, *, suffix: str, delete: bool = True) -> None:
-        self._directory = directory
-        self._suffix = suffix
-        self._delete = delete
-        self._path: Path | None = None
-
-    def __enter__(self) -> Path:
-        fd, name = tempfile.mkstemp(
-            dir=str(self._directory),
-            prefix="process-media_tmp.",
-            suffix=self._suffix,
-        )
-        os.close(fd)
-        self._path = Path(name)
-        return self._path
-
-    def __exit__(self, exc_type, exc, tb) -> None:
-        if self._delete and self._path is not None and self._path.exists():
+    fd, name = tempfile.mkstemp(
+        dir=str(directory),
+        prefix="process-media_tmp.",
+        suffix=suffix,
+    )
+    os.close(fd)
+    path = Path(name)
+    try:
+        yield path
+    finally:
+        if delete:
             try:
-                self._path.unlink()
-            except OSError:
+                path.unlink()
+            except FileNotFoundError:
                 pass
-
-
-# Note: the small custom _tempfile context manager intentionally keeps behavior
-# consistent across platforms (mkstemp + close + Path). It is simple and
-# reliable; using NamedTemporaryFile with delete=False would be an alternative,
-# but this class exists to control the exact naming/location semantics.
+            except OSError as exc:
+                logger.debug("Failed to remove tempfile %s: %s", path, exc)

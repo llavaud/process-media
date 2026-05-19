@@ -9,9 +9,9 @@ import subprocess
 import sys
 import traceback
 from concurrent.futures import ProcessPoolExecutor, as_completed
+from contextlib import suppress
 from pathlib import Path
 
-from rich.logging import RichHandler
 from rich.progress import (
     BarColumn,
     MofNCompleteColumn,
@@ -21,6 +21,7 @@ from rich.progress import (
     TimeElapsedColumn,
 )
 
+from .logging_setup import setup_logging
 from .media.base import JobResult, MediaJob
 from .media.photo import process_photo
 from .media.video import process_video
@@ -46,27 +47,21 @@ def _worker_init(log_level: int) -> None:
        logging on some platforms), so warnings and exception tracebacks
        emitted from worker code reach the user.
     """
-    try:
-        os.setsid()
-    except (PermissionError, OSError):
-        # Already a session leader (rare) or unsupported platform — keep going.
-        pass
+    # ``os.setsid`` only exists on POSIX. Guard explicitly so the worker
+    # boots cleanly on platforms (e.g. Windows) where it is missing —
+    # falling back to per-PID kill in :func:`_kill_pool`.
+    if hasattr(os, "setsid"):
+        # Either succeeds, or we're already a session leader — both are fine.
+        with suppress(OSError):
+            os.setsid()
 
     signal.signal(signal.SIGINT, signal.SIG_IGN)
 
-    root = logging.getLogger()
-    # Reset any inherited config (Linux fork).
-    for h in list(root.handlers):
-        root.removeHandler(h)
-    handler = RichHandler(
-        rich_tracebacks=True,
-        show_path=False,
-        show_time=False,
-        markup=False,
-    )
-    handler.setLevel(log_level)
-    root.addHandler(handler)
-    root.setLevel(log_level)
+    # Reset and reconfigure logging from scratch: ``ProcessPoolExecutor``
+    # may spawn fresh interpreters (or fork before the parent configured
+    # logging on some platforms), so warnings and tracebacks raised in
+    # worker code reach the user with the same formatting.
+    setup_logging(log_level)
 
 
 def _execute(job: MediaJob) -> JobResult:
@@ -100,15 +95,17 @@ def _kill_pool(executor: ProcessPoolExecutor) -> None:
     instead of leaving it orphaned at full CPU after a Ctrl+C.
     """
     procs = getattr(executor, "_processes", None) or {}
+    has_killpg = hasattr(os, "killpg")
     for proc in list(procs.values()):
-        try:
-            os.killpg(proc.pid, signal.SIGTERM)
-        except (ProcessLookupError, PermissionError, OSError):
-            # Worker may have already exited; fall back to per-PID kill.
+        if has_killpg:
             try:
-                os.kill(proc.pid, signal.SIGTERM)
-            except (ProcessLookupError, PermissionError):
+                os.killpg(proc.pid, signal.SIGTERM)
+                continue
+            except (ProcessLookupError, PermissionError, OSError):
+                # Worker may have already exited; fall through to per-PID kill.
                 pass
+        with suppress(ProcessLookupError, PermissionError, OSError):
+            os.kill(proc.pid, signal.SIGTERM)
 
 
 def _reset_tty() -> None:
@@ -120,7 +117,7 @@ def _reset_tty() -> None:
     """
     if not sys.stdin.isatty():
         return
-    try:
+    with suppress(FileNotFoundError, subprocess.TimeoutExpired):
         subprocess.run(
             ["stty", "sane"],
             check=False,
@@ -129,8 +126,6 @@ def _reset_tty() -> None:
             stderr=subprocess.DEVNULL,
             timeout=2,
         )
-    except (FileNotFoundError, subprocess.TimeoutExpired):
-        pass
 
 
 def _clean_stale_tempfiles(jobs: list[MediaJob]) -> None:
@@ -153,9 +148,9 @@ def _clean_stale_tempfiles(jobs: list[MediaJob]) -> None:
         for stale in parent.glob("process-media_tmp.*"):
             try:
                 stale.unlink()
-                logger.debug("Removed stale tempfile %s", stale)
             except OSError:
-                pass
+                continue
+            logger.debug("Removed stale tempfile %s", stale)
 
 
 def run_jobs(
@@ -185,6 +180,17 @@ def run_jobs(
     )
     previous_handler = signal.getsignal(signal.SIGINT)
     interrupted = False
+    shutdown_done = False
+
+    def _shutdown(*, wait: bool, cancel_futures: bool = False) -> None:
+        nonlocal shutdown_done
+        if shutdown_done:
+            return
+        shutdown_done = True
+        with suppress(RuntimeError):
+            # ``RuntimeError`` is raised if the executor was already shut
+            # down by another code path — safe to ignore.
+            executor.shutdown(wait=wait, cancel_futures=cancel_futures)
 
     def _on_sigint(_signum, _frame) -> None:
         nonlocal interrupted
@@ -196,11 +202,8 @@ def run_jobs(
         interrupted = True
         logger.warning("Interrupted by user, terminating workers…")
         _kill_pool(executor)
-        # cancel pending tasks (won't touch running ones, but we just killed those)
-        try:
-            executor.shutdown(wait=False, cancel_futures=True)
-        except Exception:
-            pass
+        # Cancel pending tasks (already-running ones were just killed).
+        _shutdown(wait=False, cancel_futures=True)
 
     signal.signal(signal.SIGINT, _on_sigint)
 
@@ -219,7 +222,7 @@ def run_jobs(
     finally:
         signal.signal(signal.SIGINT, previous_handler)
         # If we were interrupted, workers are gone — don't wait.
-        executor.shutdown(wait=not interrupted)
+        _shutdown(wait=not interrupted)
         _reset_tty()
         if interrupted:
             raise KeyboardInterrupt

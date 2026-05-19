@@ -97,21 +97,35 @@ class FormatSpec(BaseModel):
     def _check_vcodec_params(cls, v: str | None) -> str | None:
         if v is None:
             return v
-        if not re.match(r"^[\w:=]+$", v):
+        # Real-world x264/x265 params commonly include ``-``, ``.`` and
+        # ``,`` (e.g. ``bframes=3:b-adapt=2``, ``qcomp=0.6``). Whitespace
+        # and shell metacharacters remain forbidden — the command is
+        # passed as a list to ``subprocess`` so no shell injection is
+        # possible regardless, but rejecting them upfront keeps misuse
+        # obvious.
+        if not re.match(r"^[\w:=,.\-]+$", v):
             raise ValueError(f"vcodec_params has invalid characters: {v!r}")
         return v
 
     @model_validator(mode="after")
     def _check_video_only_options(self) -> FormatSpec:
+        # Use ``is`` comparisons explicitly: ``0 in (None, False)`` is True
+        # because ``0 == False`` in Python, which would let ``compress: 0``
+        # slip through on a video format.
         if self.type == "photo":
-            for forbidden in ("reencode", "thumbnail", "vcodec", "vcodec_params"):
-                value = getattr(self, forbidden)
-                if value not in (None, False):
-                    raise ValueError(f"option {forbidden!r} is not valid for type=photo")
+            if self.reencode:
+                raise ValueError("option 'reencode' is not valid for type=photo")
+            if self.thumbnail:
+                raise ValueError("option 'thumbnail' is not valid for type=photo")
+            if self.vcodec is not None:
+                raise ValueError("option 'vcodec' is not valid for type=photo")
+            if self.vcodec_params is not None:
+                raise ValueError("option 'vcodec_params' is not valid for type=photo")
         else:  # video
-            for forbidden in ("progressive", "compress"):
-                if getattr(self, forbidden) not in (None, False):
-                    raise ValueError(f"option {forbidden!r} is not valid for type=video")
+            if self.progressive:
+                raise ValueError("option 'progressive' is not valid for type=video")
+            if self.compress is not None:
+                raise ValueError("option 'compress' is not valid for type=video")
         return self
 
 

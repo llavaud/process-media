@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import logging
 import mimetypes
+import os
 import time
 from collections import defaultdict
-from collections.abc import Iterable
-from dataclasses import dataclass
+from collections.abc import Iterable, Iterator, Mapping
+from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -52,6 +53,11 @@ _DATE_TAGS = (
 # ``ExifTool`` typical timestamp format.
 _EXIF_TS_FORMAT = "%Y:%m:%d %H:%M:%S"
 _EXIF_NULL = "0000:00:00 00:00:00"
+
+# Cap how many files we send to a single ``exiftool`` invocation: an
+# extremely large argv eventually hits ``ARG_MAX`` (typically ~128 KiB on
+# Linux). 1000 leaves comfortable headroom even with long absolute paths.
+_EXIFTOOL_CHUNK = 1000
 
 
 def _classify(path: Path) -> MediaType | None:
@@ -98,12 +104,7 @@ def scan_media(path: Path, *, recursive: bool = False) -> list[tuple[Path, Media
         raise FileNotFoundError(f"{path} is neither a file nor a directory")
 
     if recursive:
-        entries = (
-            p
-            for p in path.rglob("*")
-            # Skip files whose any path segment (relative to root) is hidden.
-            if not any(part.startswith(".") for part in p.relative_to(path).parts)
-        )
+        entries: Iterable[Path] = _walk_visible(path)
     else:
         entries = (p for p in path.iterdir() if not p.name.startswith("."))
 
@@ -114,6 +115,23 @@ def scan_media(path: Path, *, recursive: bool = False) -> list[tuple[Path, Media
         if kind is not None:
             results.append((entry, kind))
     return results
+
+
+def _walk_visible(root: Path) -> Iterator[Path]:
+    """Recursively yield non-hidden files below ``root``.
+
+    Uses :func:`os.walk` so we can prune hidden directories **in place**
+    instead of letting :meth:`Path.rglob` descend into them just to
+    filter their contents out afterwards — a significant win on trees
+    containing large ``.git`` or ``.cache`` subtrees.
+    """
+    for dirpath, dirnames, filenames in os.walk(root):
+        # Mutate ``dirnames`` in place so os.walk skips hidden subtrees.
+        dirnames[:] = [d for d in dirnames if not d.startswith(".")]
+        for name in filenames:
+            if name.startswith("."):
+                continue
+            yield Path(dirpath) / name
 
 
 def exif_date_to_name(dt: datetime, tzoffset: int = 0) -> str:
@@ -134,13 +152,16 @@ def fallback_name(path: Path) -> str:
 def _parse_exif_timestamp(value: str) -> datetime | None:
     if not value or value.startswith(_EXIF_NULL):
         return None
-    # Strip a trailing timezone like "+02:00" if present.
-    candidate = value.split("+")[0].split("Z")[0].strip()
+    # Keep only the leading ``YYYY:MM:DD HH:MM:SS`` chunk, regardless of
+    # any trailing timezone (``+02:00``, ``-08:00``, ``Z``, ``.123``…).
+    # We always strip the timezone here because tz handling is centralised
+    # in :func:`_adjust_for_media` (QuickTime UTC vs. explicit --tzoffset).
+    candidate = value.strip()[:19]
     try:
-        return datetime.strptime(candidate[:19], _EXIF_TS_FORMAT)
+        return datetime.strptime(candidate, _EXIF_TS_FORMAT)
     except ValueError:
         try:
-            return datetime.fromisoformat(candidate)
+            return datetime.fromisoformat(value.strip())
         except ValueError:
             return None
 
@@ -164,8 +185,21 @@ def batch_exif_dates(paths: list[Path]) -> dict[Path, ExifDate | None]:
     by_resolved: dict[Path, Path] = {p.resolve(): p for p in paths}
     out: dict[Path, ExifDate | None] = {p: None for p in paths}
 
+    # The basename fallback below is only safe when every input file has
+    # a unique basename. With ``--recursive`` two distinct files can share
+    # the same name in different directories — matching by basename would
+    # then attribute the wrong EXIF date. Pre-compute a name → path map
+    # that only retains names appearing exactly once.
+    name_counts: dict[str, int] = defaultdict(int)
+    for p in paths:
+        name_counts[p.name] += 1
+    by_unique_name: dict[str, Path] = {p.name: p for p in paths if name_counts[p.name] == 1}
+
+    records: list[dict] = []
     with ExifToolHelper() as et:
-        records = et.get_tags([str(p) for p in paths], tags=list(_DATE_TAGS))
+        for start in range(0, len(paths), _EXIFTOOL_CHUNK):
+            chunk = paths[start : start + _EXIFTOOL_CHUNK]
+            records.extend(et.get_tags([str(p) for p in chunk], tags=list(_DATE_TAGS)))
 
     for record in records:
         raw_src = record.get("SourceFile", "")
@@ -177,13 +211,16 @@ def batch_exif_dates(paths: list[Path]) -> dict[Path, ExifDate | None]:
             resolved = Path(raw_src)
         src = by_resolved.get(resolved)
         if src is None:
-            # Fallback: match by name within the original set.
-            for p in paths:
-                if p.name == Path(raw_src).name:
-                    src = p
-                    break
-        if src is None:
-            continue
+            # Safe fallback: only match by name when the name is unique
+            # in the input set. Otherwise we'd risk attributing the EXIF
+            # date to the wrong file.
+            src = by_unique_name.get(Path(raw_src).name)
+            if src is None:
+                logger.warning(
+                    "Could not match exiftool record %r to any input file; skipping",
+                    raw_src,
+                )
+                continue
         for tag in _DATE_TAGS:
             value = record.get(tag)
             if value:
@@ -224,7 +261,7 @@ def _resolve_output_dir(source: Path, spec: FormatSpec, format_name: str) -> Pat
     return source.parent / candidate
 
 
-def _target_extension(media_type: MediaType, source: Path) -> str:
+def _target_extension(media_type: MediaType) -> str:
     if media_type == "photo":
         return PHOTO_OUTPUT_EXT
     # Videos always go out as MP4 — the ffmpeg pipeline muxes ``-f mp4``.
@@ -233,9 +270,9 @@ def _target_extension(media_type: MediaType, source: Path) -> str:
 
 def build_jobs(
     files: Iterable[tuple[Path, MediaType]],
-    formats: dict[str, FormatSpec],
+    formats: Mapping[str, FormatSpec],
     global_opts: GlobalOptions,
-    exif_dates: dict[Path, ExifDate | datetime | None],
+    exif_dates: Mapping[Path, ExifDate | datetime | None],
 ) -> list[MediaJob]:
     """Build the full ``MediaJob`` list (cartesian product, deduped).
 
@@ -258,7 +295,7 @@ def build_jobs(
                 base = adjusted.strftime("%Y%m%d-%H%M%S")
             else:
                 base = fallback_name(source)
-            ext = _target_extension(media_type, source)
+            ext = _target_extension(media_type)
             outdir = _resolve_output_dir(source, spec, fname)
             jobs.append(
                 MediaJob(
@@ -279,17 +316,21 @@ def _dedupe_jobs(jobs: list[MediaJob]) -> list[MediaJob]:
 
     Numbering happens **per (media_type, target_path)** so photos and videos
     don't share counters. ALL colliding jobs receive a suffix so every
-    member of the duplicate group is renamed consistently.
+    member of the duplicate group is renamed consistently. ``MediaJob`` is
+    frozen, so we rebuild jobs with :func:`dataclasses.replace` rather than
+    mutating in place.
     """
-    groups: dict[tuple[MediaType, Path], list[MediaJob]] = defaultdict(list)
-    for job in jobs:
-        groups[(job.media_type, job.target)].append(job)
+    groups: dict[tuple[MediaType, Path], list[int]] = defaultdict(list)
+    for idx, job in enumerate(jobs):
+        groups[(job.media_type, job.target)].append(idx)
 
-    for (_mt, target), group in groups.items():
-        if len(group) <= 1:
+    deduped: list[MediaJob] = list(jobs)
+    for (_mt, target), indices in groups.items():
+        if len(indices) <= 1:
             continue
-        for index, job in enumerate(group, start=1):
-            stem = target.stem
-            ext = target.suffix
-            job.target = target.with_name(f"{stem}-{index:03d}{ext}")
-    return jobs
+        stem = target.stem
+        ext = target.suffix
+        for rank, idx in enumerate(indices, start=1):
+            new_target = target.with_name(f"{stem}-{rank:03d}{ext}")
+            deduped[idx] = replace(deduped[idx], target=new_target)
+    return deduped

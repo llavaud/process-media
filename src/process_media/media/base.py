@@ -20,9 +20,15 @@ if TYPE_CHECKING:
 MediaType = Literal["photo", "video"]
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class MediaJob:
-    """One unit of work: turn ``source`` into ``target`` using ``format_spec``."""
+    """One unit of work: turn ``source`` into ``target`` using ``format_spec``.
+
+    Frozen so jobs are safe to share across processes and used as dict
+    keys; immutability also forces call sites (notably the dedup pass)
+    to go through :func:`dataclasses.replace`, which makes target
+    rewrites explicit.
+    """
 
     source: Path
     target: Path
@@ -33,7 +39,7 @@ class MediaJob:
     verbose: bool = False
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class JobResult:
     """Outcome of a single :class:`MediaJob` execution."""
 

@@ -3,36 +3,44 @@
 from __future__ import annotations
 
 from pathlib import Path
-from types import SimpleNamespace
 
+import pytest
+
+from process_media.config import FormatSpec
 from process_media.media.video import _build_vf, _filter_ffmetadata
 
 
+def _spec(*, rotate: str = "auto", resize: int | None = None) -> FormatSpec:
+    """Build a real ``FormatSpec`` so validators run on the inputs too."""
+    return FormatSpec.model_validate({"type": "video", "rotate": rotate, "resize": resize})
+
+
 class TestBuildVf:
-    def test_no_rotation_no_resize_returns_empty_list(self) -> None:
-        spec = SimpleNamespace(rotate="auto", resize=None)
-        assert _build_vf(spec) == []
-
-    def test_rotate_90_transpose(self) -> None:
-        spec = SimpleNamespace(rotate="90", resize=None)
-        assert _build_vf(spec) == ["transpose=1"]
-
-    def test_rotate_180_two_transposes(self) -> None:
-        spec = SimpleNamespace(rotate="180", resize=None)
-        assert _build_vf(spec) == ["transpose=1", "transpose=1"]
-
-    def test_rotate_270_three_transposes(self) -> None:
-        spec = SimpleNamespace(rotate="270", resize=None)
-        assert _build_vf(spec) == ["transpose=1", "transpose=1", "transpose=1"]
+    @pytest.mark.parametrize(
+        ("rotate", "expected"),
+        [
+            ("auto", []),
+            ("90", ["transpose=1"]),
+            ("180", ["transpose=1", "transpose=1"]),
+            ("270", ["transpose=1", "transpose=1", "transpose=1"]),
+        ],
+    )
+    def test_rotation_only(self, rotate: str, expected: list[str]) -> None:
+        assert _build_vf(_spec(rotate=rotate)) == expected
 
     def test_resize_only_uses_min_scale(self) -> None:
-        spec = SimpleNamespace(rotate="auto", resize=1024)
-        vf = _build_vf(spec)
-        assert vf and any("scale=" in f and "1024" in f for f in vf)
+        vf = _build_vf(_spec(resize=1024))
+        assert vf
+        assert any("scale=" in f and "1024" in f for f in vf)
+
+    def test_scale_filter_forces_even_height(self) -> None:
+        # The encoder rejects odd dimensions, so we always end on ``-2``
+        # (not ``-1``). See review B1.
+        vf = _build_vf(_spec(resize=1024))
+        assert vf[-1].endswith(":-2")
 
     def test_rotation_and_resize_combined(self) -> None:
-        spec = SimpleNamespace(rotate="90", resize=1024)
-        vf = _build_vf(spec)
+        vf = _build_vf(_spec(rotate="90", resize=1024))
         assert any("transpose=1" in f for f in vf)
         assert any("scale=" in f and "1024" in f for f in vf)
 

@@ -1,41 +1,46 @@
+"""Process discovery, subprocess wrapper and codec probing helpers."""
+
 from __future__ import annotations
 
 import logging
 import shutil
 import subprocess
 from collections.abc import Sequence
-from functools import lru_cache
+from functools import cache
 from pathlib import Path
 
 logger = logging.getLogger("process_media.tools")
 
 
 class ToolError(RuntimeError):
-    pass
+    """Raised whenever an external binary cannot be launched or exits non-zero."""
 
 
-@lru_cache(maxsize=32)
+@cache
 def which(name: str) -> str | None:
+    """Cached :func:`shutil.which`. The cache covers a tiny set of tools."""
     return shutil.which(name)
 
 
-_jpeginfo_warned = False
+@cache
+def _warn_jpeginfo_missing() -> None:
+    """Emit the missing-jpeginfo warning exactly once per process."""
+    logger.warning("jpeginfo not found; JPEG integrity checks will be skipped")
 
 
 def ensure_tools(needs_ffmpeg: bool, needs_exiftool: bool) -> None:
-    missing = []
+    """Verify that the requested binaries are available, raise if not."""
+    missing: list[str] = []
     if needs_ffmpeg and not which("ffmpeg"):
         missing.append("ffmpeg")
     if needs_ffmpeg and not which("ffprobe"):
         missing.append("ffprobe")
     if needs_exiftool and not which("exiftool"):
         missing.append("exiftool")
-    global _jpeginfo_warned
-    if not which("jpeginfo") and not _jpeginfo_warned:
-        logger.warning("jpeginfo not found; JPEG integrity checks will be skipped")
-        _jpeginfo_warned = True
+    if not which("jpeginfo"):
+        _warn_jpeginfo_missing()
     if missing:
-        raise RuntimeError(f"Missing required tools: {', '.join(missing)}")
+        raise ToolError(f"Missing required tools: {', '.join(missing)}")
 
 
 def run(
@@ -43,7 +48,7 @@ def run(
     check: bool = True,
     timeout: int | None = None,
     cwd: Path | None = None,
-) -> subprocess.CompletedProcess:
+) -> subprocess.CompletedProcess[bytes]:
     """Wrap ``subprocess.run`` with project-wide defaults.
 
     - Captures stdout and stderr (returned via ``CompletedProcess``).
@@ -64,8 +69,8 @@ def run(
         )
     except subprocess.TimeoutExpired as exc:
         raise ToolError(f"Command {cmd!r} timed out after {exc.timeout}s") from exc
-    except Exception as e:
-        raise ToolError(str(e)) from e
+    except (OSError, FileNotFoundError) as exc:
+        raise ToolError(f"Failed to execute {cmd!r}: {exc}") from exc
     if check and cp.returncode != 0:
         stderr = cp.stderr.decode(errors="ignore")[:2000]
         raise ToolError(f"Command {cmd!r} failed (rc={cp.returncode}): {stderr}")
@@ -73,6 +78,7 @@ def run(
 
 
 def probe_audio_codec(path: Path) -> str | None:
+    """Return the audio codec name of ``path`` or ``None`` if undetectable."""
     ffprobe = which("ffprobe")
     if not ffprobe:
         return None
@@ -90,7 +96,8 @@ def probe_audio_codec(path: Path) -> str | None:
     ]
     try:
         cp = run(cmd, check=False)
-        out = cp.stdout.decode().strip()
-        return out.splitlines()[0] if out else None
-    except Exception:
+    except ToolError as exc:
+        logger.debug("ffprobe audio codec lookup failed for %s: %s", path, exc)
         return None
+    out = cp.stdout.decode(errors="ignore").strip()
+    return out.splitlines()[0] if out else None
