@@ -6,6 +6,7 @@ import json
 import logging
 import mimetypes
 import os
+import re
 import time
 from collections import defaultdict
 from collections.abc import Iterable, Iterator, Mapping
@@ -39,7 +40,7 @@ class ExifDate:
 logger = logging.getLogger("process_media.naming")
 
 
-PHOTO_EXTS = frozenset({".jpg", ".jpeg", ".heic", ".heif"})
+PHOTO_EXTS = frozenset({".jpg", ".jpeg", ".heic", ".heif", ".png"})
 VIDEO_EXTS = frozenset({".mp4", ".mov", ".m4v", ".avi", ".mkv", ".webm", ".3gp"})
 
 # Output extensions are normalised: every encoded video is muxed as MP4
@@ -148,9 +149,100 @@ def exif_date_to_name(dt: datetime, tzoffset: int = 0) -> str:
     return dt.strftime("%Y%m%d-%H%M%S")
 
 
+# Recognised ``YYYY MM DD ?? HH MM SS`` patterns embedded in file names.
+# We accept any single non-alphanumeric separator (or none) between the
+# date components — this covers Samsung (``20251019_132023``), screenshot
+# tools (``Screenshot_2025-10-19-13-20-23``), iPhone exports
+# (``IMG_20251019_132023``), iCloud (``IMG-20251019-WA0001``), etc.
+_FILENAME_DATE_RE = re.compile(
+    r"""
+    (?P<year>(?:19|20)\d{2})        # 1900-2099 sanity bound
+    [-_./]?
+    (?P<month>0[1-9]|1[0-2])
+    [-_./]?
+    (?P<day>0[1-9]|[12]\d|3[01])
+    (?:                              # optional time portion
+        [\s_T-]?
+        (?P<hour>[01]\d|2[0-3])
+        [-:_.]?
+        (?P<minute>[0-5]\d)
+        [-:_.]?
+        (?P<second>[0-5]\d)
+    )?
+    """,
+    re.VERBOSE,
+)
+
+
+def parse_date_from_filename(stem: str) -> datetime | None:
+    """Try to extract a ``datetime`` from common file-name patterns.
+
+    Returns ``None`` when no plausible timestamp is found. Files without
+    an explicit time component get ``00:00:00`` so they still sort by day
+    — callers may decide to discard them if they want stricter matching.
+    """
+    match = _FILENAME_DATE_RE.search(stem)
+    if not match:
+        return None
+    try:
+        return datetime(
+            year=int(match["year"]),
+            month=int(match["month"]),
+            day=int(match["day"]),
+            hour=int(match["hour"] or 0),
+            minute=int(match["minute"] or 0),
+            second=int(match["second"] or 0),
+        )
+    except ValueError:
+        # Component out of range (e.g. day 31 in February).
+        return None
+
+
 def fallback_name(path: Path) -> str:
     """When EXIF data is missing, keep the original stem."""
     return path.stem
+
+
+def resolve_base_name(
+    source: Path,
+    exif_entry: ExifDate | datetime | None,
+    media_type: MediaType,
+    tzoffset: int,
+) -> str:
+    """Pick the best name for ``source`` and log how it was obtained.
+
+    Resolution order:
+
+    1. EXIF/QuickTime metadata (preferred).
+    2. A date embedded in the file name (e.g. ``20251019_132023``).
+    3. The original file stem — logged at INFO so the user understands
+       why a file was not renamed to ``YYYYMMDD-HHMMSS``.
+    """
+    if exif_entry is not None:
+        if isinstance(exif_entry, ExifDate):
+            adjusted = _adjust_for_media(exif_entry, media_type, tzoffset)
+            logger.debug("[%s] using EXIF tag %s", source.name, exif_entry.tag)
+        else:
+            # Bare datetime: only the explicit tzoffset applies.
+            adjusted = exif_entry + timedelta(seconds=tzoffset)
+            logger.debug("[%s] using provided datetime", source.name)
+        return adjusted.strftime("%Y%m%d-%H%M%S")
+
+    parsed = parse_date_from_filename(source.stem)
+    if parsed is not None:
+        adjusted = parsed + timedelta(seconds=tzoffset)
+        logger.info(
+            "[%s] no EXIF date; using timestamp parsed from filename",
+            source.name,
+        )
+        return adjusted.strftime("%Y%m%d-%H%M%S")
+
+    logger.warning(
+        "[%s] no EXIF date and no recognisable timestamp in the filename; "
+        "keeping the original stem",
+        source.name,
+    )
+    return fallback_name(source)
 
 
 def _parse_exif_timestamp(value: str) -> datetime | None:
@@ -325,21 +417,29 @@ def build_jobs(
     tag origin for timezone handling) or a bare :class:`datetime` for
     backward compatibility with tests.
     """
+    # Resolve each source's base name once, even when it produces several
+    # jobs (e.g. one per format) — otherwise the same fallback warning
+    # would be emitted multiple times.
+    base_names: dict[Path, str] = {}
+    if global_opts.keep_name:
+        base_names = {source: fallback_name(source) for source, _ in files}
+    else:
+        for source, media_type in files:
+            if source in base_names:
+                continue
+            base_names[source] = resolve_base_name(
+                source,
+                exif_dates.get(source),
+                media_type,
+                global_opts.tzoffset,
+            )
+
     jobs: list[MediaJob] = []
     for source, media_type in files:
         for fname, spec in formats.items():
             if spec.type != media_type:
                 continue
-            entry = exif_dates.get(source)
-            if not global_opts.keep_name and entry is not None:
-                if isinstance(entry, ExifDate):
-                    adjusted = _adjust_for_media(entry, media_type, global_opts.tzoffset)
-                else:
-                    # Bare datetime: apply only the explicit tzoffset.
-                    adjusted = entry + timedelta(seconds=global_opts.tzoffset)
-                base = adjusted.strftime("%Y%m%d-%H%M%S")
-            else:
-                base = fallback_name(source)
+            base = base_names[source]
             ext = _target_extension(media_type)
             outdir = _resolve_output_dir(source, spec, fname)
             jobs.append(

@@ -1,4 +1,19 @@
-process-media (2.0.0-1) UNRELEASED; urgency=medium
+process-media (2.0.1-1) stable; urgency=medium
+
+  * Recognise common date patterns in file names when EXIF metadata is
+    missing (Samsung ``YYYYMMDD_HHMMSS``, iPhone ``IMG_…``,
+    ``Screenshot_YYYY-MM-DD-HH-MM-SS``, WhatsApp ``IMG-YYYYMMDD-…``)
+    so screenshots and PNG captures are renamed consistently with
+    EXIF-tagged photos.
+  * Always log how the base name was resolved (EXIF tag used, date
+    parsed from the filename, or fallback to the original stem with
+    a warning) so users can immediately understand why a given file
+    was or was not renamed to YYYYMMDD-HHMMSS.
+  * Add ``.png`` to the recognised photo extensions.
+
+ -- Laurent Lavaud <l.lavaud@gmail.com>  Tue, 19 May 2026 23:30:37 +0200
+
+process-media (2.0.0-1) stable; urgency=medium
 
   * Initial Debian package for the Python rewrite (2.0.0).
     - Drop the legacy Perl implementation in favour of a Python 3.11+

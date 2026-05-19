@@ -1,6 +1,6 @@
 [project]
 name = "process-media"
-version = "2.0.0"
+version = "2.0.1"
 description = "Rename and process photos and videos from their EXIF metadata"
 requires-python = ">=3.11"
 license = { text = "MIT" }
