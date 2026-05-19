@@ -1,5 +1,8 @@
 blank_issues_enabled: false
 contact_links:
+  - name: Ask a question / share an idea
+    url: https://github.com/llavaud/process-media/discussions
+    about: For usage questions, feedback or general discussion, head to Discussions.
   - name: README and CLI options
     url: https://github.com/llavaud/process-media#readme
     about: Most questions are answered in the README — give it a quick look first.
