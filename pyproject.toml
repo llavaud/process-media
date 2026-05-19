@@ -22,9 +22,13 @@ dependencies = [
   "pydantic>=2.6",
   "pyyaml>=6",
   "pillow>=10.3",
-  "pyexiftool>=0.5",
   "rich>=13.7",
 ]
+
+# Runtime tools (not pip-installable): ``exiftool``, ``ffmpeg``,
+# ``ffprobe`` and optionally ``jpeginfo``. They are validated at
+# startup by :func:`process_media.tools.ensure_tools`. Distribution
+# packages (Debian/Ubuntu) declare them in the ``Depends:`` field.
 
 [project.optional-dependencies]
 # HEIC/HEIF photo support (Apple devices). Optional because libheif is

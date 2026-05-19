@@ -8,3 +8,13 @@ build/
 .coverage
 .mypy_cache/
 .ruff_cache/
+
+# Debian packaging build artefacts
+.pybuild/
+debian/.debhelper/
+debian/debhelper-build-stamp
+debian/files
+debian/*.log
+debian/*.substvars
+debian/*.debhelper
+debian/process-media/

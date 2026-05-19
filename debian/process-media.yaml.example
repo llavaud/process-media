@@ -1,0 +1,44 @@
+# Example configuration for process-media.
+#
+# Copy to /etc/process-media.yaml, ~/.process-media.yaml or alongside the
+# media directory you intend to process. See ``process-media --help`` and
+# /usr/share/doc/process-media/README.md for the full reference.
+
+global:
+  max_threads: 0       # 0 = use all CPU cores
+  verbose: false
+  keep_name: false     # rename files from EXIF dates (YYYYMMDD-HHMMSS)
+  overwrite: false
+  tzoffset: 0          # seconds added to EXIF timestamps before renaming
+
+formats:
+  archive_photo:
+    type: photo
+    rotate: auto       # honour EXIF Orientation
+    output_dir: archive
+
+  web_photo:
+    type: photo
+    rotate: auto
+    resize: 1920       # longest edge, no upscaling
+    compress: 90       # JPEG quality
+    progressive: true
+    strip: true
+    strip_exclude: [orientation]
+    output_dir: web
+
+  archive_video:
+    type: video
+    rotate: auto
+    reencode: true
+    vcodec: x264
+    output_dir: archive/videos
+
+  web_video:
+    type: video
+    rotate: auto
+    reencode: true
+    resize: 1024
+    strip: true
+    thumbnail: true
+    output_dir: web/videos

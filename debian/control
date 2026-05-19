@@ -1,0 +1,45 @@
+Source: process-media
+Section: graphics
+Priority: optional
+Maintainer: Laurent Lavaud <l.lavaud@gmail.com>
+Build-Depends:
+ debhelper-compat (= 13),
+ dh-sequence-python3,
+ pybuild-plugin-pyproject,
+ python3-all,
+ python3-hatchling,
+ python3-pil <!nocheck>,
+ python3-pydantic (>= 2.6) <!nocheck>,
+ python3-pytest <!nocheck>,
+ python3-rich <!nocheck>,
+ python3-typer <!nocheck>,
+ python3-yaml <!nocheck>,
+Standards-Version: 4.7.0
+Homepage: https://github.com/llavaud/process-media
+Vcs-Git: https://github.com/llavaud/process-media.git
+Vcs-Browser: https://github.com/llavaud/process-media
+Rules-Requires-Root: no
+
+Package: process-media
+Architecture: all
+Depends:
+ ${python3:Depends},
+ ${misc:Depends},
+ exiftool,
+ ffmpeg,
+ python3-pil,
+ python3-pydantic (>= 2.6),
+ python3-rich,
+ python3-typer,
+ python3-yaml,
+Recommends: jpeginfo
+Suggests: python3-pillow-heif
+Description: Rename and process photos and videos from their EXIF metadata
+ process-media is a command-line tool that scans photos and videos, reads
+ their EXIF metadata to rename them after their creation date
+ (YYYYMMDD-HHMMSS), then applies configurable transformations: resize,
+ rotation, JPEG recompression, metadata stripping, video re-encoding and
+ thumbnail generation.
+ .
+ Output flavours are defined in a YAML configuration file so the same source
+ collection can be processed in several variants in a single run.

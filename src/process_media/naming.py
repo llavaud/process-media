@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import mimetypes
 import os
@@ -11,6 +12,9 @@ from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Any
+
+from .tools import ToolError, run, which
 
 from .config import FormatSpec, GlobalOptions
 from .media.base import MediaJob, MediaType
@@ -166,6 +170,52 @@ def _parse_exif_timestamp(value: str) -> datetime | None:
             return None
 
 
+def _run_exiftool_json(paths: list[Path]) -> list[dict[str, Any]]:
+    """Invoke the ``exiftool`` binary and return the parsed JSON records.
+
+    ``exiftool`` produces one JSON object per input file, with tag names
+    prefixed by their group (``EXIF:DateTimeOriginal``,
+    ``QuickTime:CreateDate``…) thanks to ``-G``. The CLI binary is the
+    only required runtime dependency; this avoids pulling the
+    ``pyexiftool`` Python wrapper, which is not packaged for Debian
+    stable / Ubuntu LTS.
+    """
+    exiftool = which("exiftool")
+    if exiftool is None:
+        raise ToolError("exiftool binary is required to read EXIF dates")
+
+    # ``-fast2`` skips parsing the maker notes and the trailer — both
+    # irrelevant here and noticeably faster on large photo sets.
+    # ``-S`` (very short) is incompatible with ``-json``, so we rely on
+    # the default JSON formatting.
+    cmd: list[str] = [
+        exiftool,
+        "-json",
+        "-G",
+        "-fast2",
+        "-q",
+        "-charset",
+        "filename=UTF8",
+    ]
+    cmd += [f"-{tag}" for tag in _DATE_TAGS]
+    cmd += [str(p) for p in paths]
+
+    completed = run(cmd, check=False)
+    if not completed.stdout:
+        # ``exiftool`` returns a non-zero exit code when *any* file has
+        # no relevant tag, even though the JSON body is still valid for
+        # the other files. We therefore tolerate non-zero exits as long
+        # as we got JSON back.
+        return []
+    try:
+        data = json.loads(completed.stdout.decode("utf-8", errors="replace"))
+    except json.JSONDecodeError as exc:
+        raise ToolError(f"exiftool returned invalid JSON: {exc}") from exc
+    if not isinstance(data, list):
+        raise ToolError("exiftool JSON output is not a list of records")
+    return data
+
+
 def batch_exif_dates(paths: list[Path]) -> dict[Path, ExifDate | None]:
     """Read creation dates for ``paths`` using a single ``exiftool`` process.
 
@@ -176,10 +226,6 @@ def batch_exif_dates(paths: list[Path]) -> dict[Path, ExifDate | None]:
     """
     if not paths:
         return {}
-
-    # Local import keeps the dependency optional for unit tests that
-    # don't go through the full pipeline.
-    from exiftool import ExifToolHelper
 
     # Index by resolved path so we can match ExifTool's SourceFile reliably.
     by_resolved: dict[Path, Path] = {p.resolve(): p for p in paths}
@@ -195,11 +241,10 @@ def batch_exif_dates(paths: list[Path]) -> dict[Path, ExifDate | None]:
         name_counts[p.name] += 1
     by_unique_name: dict[str, Path] = {p.name: p for p in paths if name_counts[p.name] == 1}
 
-    records: list[dict] = []
-    with ExifToolHelper() as et:
-        for start in range(0, len(paths), _EXIFTOOL_CHUNK):
-            chunk = paths[start : start + _EXIFTOOL_CHUNK]
-            records.extend(et.get_tags([str(p) for p in chunk], tags=list(_DATE_TAGS)))
+    records: list[dict[str, Any]] = []
+    for start in range(0, len(paths), _EXIFTOOL_CHUNK):
+        chunk = paths[start : start + _EXIFTOOL_CHUNK]
+        records.extend(_run_exiftool_json(chunk))
 
     for record in records:
         raw_src = record.get("SourceFile", "")
