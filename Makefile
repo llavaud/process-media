@@ -9,7 +9,7 @@ SRC    := src tests
 .DEFAULT_GOAL := help
 
 .PHONY: help venv install test lint format check clean deb deb-clean \
-        apt-publish apt-push apt-status
+        deb-lint apt-publish apt-push apt-status
 
 help:  ## Show this help
 	@awk 'BEGIN{FS=":.*##"; printf "Available targets:\n\n"} \
@@ -52,6 +52,11 @@ deb-clean:  ## Remove debian build artefacts
 	       debian/debhelper-build-stamp debian/*.substvars debian/*.log
 	rm -f ../process-media_*.deb ../process-media_*.changes \
 	      ../process-media_*.buildinfo
+
+deb-lint:  ## Run lintian on the most recent .changes (--profile debian)
+	@last="$$(ls -1t ../process-media_*.changes 2>/dev/null | head -n1)"; \
+	test -n "$$last" || { echo "no .changes file found, run 'make deb' first"; exit 1; }; \
+	lintian --profile debian "$$last"
 
 apt-publish: deb  ## Build a .deb and ingest it into the gh-pages APT repo
 	scripts/apt-publish.sh
