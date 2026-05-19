@@ -1,5 +1,5 @@
 Package: process-media
-Version: 2.0.1-1
+Version: 2.0.1-2
 Architecture: all
 Maintainer: Laurent Lavaud <l.lavaud@gmail.com>
 Installed-Size: 109
@@ -9,11 +9,11 @@ Suggests: python3-pillow-heif
 Homepage: https://github.com/llavaud/process-media
 Priority: optional
 Section: graphics
-Filename: pool/main/p/process-media/process-media_2.0.1-1_all.deb
-Size: 30646
-SHA256: 29231033fff244facd47a3221c3b065a9a53b1b5c0ce705f127161b88c770b05
-SHA1: 89a6e6d83bb4c6cba10f47931db3ab48906a2c41
-MD5sum: 59add5c74879bcf42e48c23b66323d10
+Filename: pool/main/p/process-media/process-media_2.0.1-2_all.deb
+Size: 30722
+SHA256: 638ddbaac06adf82bcad46b24b62f4feac90dab8ca3f426a088461bf540381a1
+SHA1: 882036aa0405cbd58bcf7de519cb1cb19351aa5d
+MD5sum: 7d0d3b52e59d24caf3d4af852d6bb064
 Description: Rename and process photos and videos from their EXIF metadata
  process-media is a command-line tool that scans photos and videos, reads
  their EXIF metadata to rename them after their creation date
