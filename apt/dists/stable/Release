@@ -1,17 +1,26 @@
 Codename: stable
-Date: Sun, 18 Feb 2024 17:50:33 UTC
-Architectures: amd64
+Date: Tue, 19 May 2026 20:58:18 UTC
+Architectures: amd64 arm64
 Components: main
 Description: Apt repository for project process-media
 MD5Sum:
- d7e042ef75c9728c3d04712b3eadc7e8 770 main/binary-amd64/Packages
- a1f2f9ab906750238f85f6937a5533fb 506 main/binary-amd64/Packages.gz
+ d41d8cd98f00b204e9800998ecf8427e 0 main/binary-amd64/Packages
+ 7029066c27ac6f5ef18d660d5741979a 20 main/binary-amd64/Packages.gz
  e12fb048caf22292f3a497b36e0b9462 90 main/binary-amd64/Release
+ d41d8cd98f00b204e9800998ecf8427e 0 main/binary-arm64/Packages
+ 7029066c27ac6f5ef18d660d5741979a 20 main/binary-arm64/Packages.gz
+ 6ba0e5339e83d5670994ba3e4e5257c3 90 main/binary-arm64/Release
 SHA1:
- 113c93a136fc6e85c93454780587694be0c88778 770 main/binary-amd64/Packages
- b2cc732b9c8d52716748a369152258ea4a7c2517 506 main/binary-amd64/Packages.gz
+ da39a3ee5e6b4b0d3255bfef95601890afd80709 0 main/binary-amd64/Packages
+ 46c6643f07aa7f6bfe7118de926b86defc5087c4 20 main/binary-amd64/Packages.gz
  0c397b34c1ee4d84e2c3b67af4a14001ae16e8aa 90 main/binary-amd64/Release
+ da39a3ee5e6b4b0d3255bfef95601890afd80709 0 main/binary-arm64/Packages
+ 46c6643f07aa7f6bfe7118de926b86defc5087c4 20 main/binary-arm64/Packages.gz
+ 4172ba93fc42fbd4f15da89d1f1b2e999afe66f6 90 main/binary-arm64/Release
 SHA256:
- 5cd766eb2be5204ebe70dbc965dce514990138cdd4ac82ca70eb4b750601093a 770 main/binary-amd64/Packages
- d2f8081b2d5c8893e8e2cf39ad5253490cf22086587e82bebb86b1ec05afb62d 506 main/binary-amd64/Packages.gz
+ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 main/binary-amd64/Packages
+ 59869db34853933b239f1e2219cf7d431da006aa919635478511fabbfc8849d2 20 main/binary-amd64/Packages.gz
  5501ffc36ad2b0f75336d73b613d864cfd71cf1987770340139d9c194e0cde35 90 main/binary-amd64/Release
+ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 main/binary-arm64/Packages
+ 59869db34853933b239f1e2219cf7d431da006aa919635478511fabbfc8849d2 20 main/binary-arm64/Packages.gz
+ 2384f1450b19ce3c4b68c280ee7021283497c7341f4047b97e6609dc5a38c936 90 main/binary-arm64/Release

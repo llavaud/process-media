@@ -1,0 +1,8 @@
+# reprepro's incoming queue is a transient staging area: packages are
+# moved into apt/pool/ as soon as `reprepro includedeb` ingests them.
+# There is no value in versioning the queue.
+apt/incoming/
+
+# Local lock/temp files reprepro may create.
+apt/db/lockfile
+apt/db/*.lock
