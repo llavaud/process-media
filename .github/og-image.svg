@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="1280" height="640">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
   <defs>
     <filter id="blur" x="-50%" y="-50%" width="200%" height="200%">
       <feGaussianBlur stdDeviation="50" />
@@ -6,15 +6,15 @@
   </defs>
 
   <!-- Background -->
-  <rect width="1280" height="640" fill="#0f1115"/>
+  <rect width="1200" height="630" fill="#0f1115"/>
   
   <!-- Subtle Background elements -->
-  <circle cx="1100" cy="50" r="300" fill="#0284c7" opacity="0.15" filter="url(#blur)"/>
+  <circle cx="1050" cy="50" r="300" fill="#0284c7" opacity="0.15" filter="url(#blur)"/>
   
   <!-- Top Accent Bar -->
-  <rect width="1280" height="8" fill="#38bdf8"/>
+  <rect width="1200" height="8" fill="#38bdf8"/>
 
-  <g transform="translate(100, 180)">
+  <g transform="translate(80, 175)">
     <!-- Logo / Icon -->
     <g transform="scale(3.5) translate(0, -7)" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
       <path d="M15 4h-6L6.5 7H3a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h18a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3.5L15 4z"/>
@@ -33,7 +33,7 @@
     <text x="0" y="225" font-family="sans-serif" font-size="44" font-weight="400" fill="#e2e8f0">from their EXIF capture date.</text>
 
     <!-- Divider -->
-    <line x1="0" y1="320" x2="1080" y2="320" stroke="#1e293b" stroke-width="2"/>
+    <line x1="0" y1="320" x2="1040" y2="320" stroke="#1e293b" stroke-width="2"/>
 
     <!-- Tech Stack / Footer -->
     <g transform="translate(0, 395)">
