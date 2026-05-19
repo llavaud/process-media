@@ -1,0 +1,101 @@
+name: CI
+
+on:
+  push:
+    branches: [master, "feat/**", "fix/**"]
+  pull_request:
+    branches: [master]
+
+# Cancel an in-flight run if another commit is pushed on the same ref.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            ffmpeg libimage-exiftool-perl jpeginfo
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install the project (with dev extras)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Run pytest
+        run: pytest -q
+
+  lint:
+    name: lint (ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install ruff
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff
+
+      - name: ruff check
+        run: ruff check src tests
+
+      - name: ruff format --check
+        run: ruff format --check src tests
+
+  package:
+    name: build .deb (Debian trixie)
+    runs-on: ubuntu-latest
+    # Build the Debian package in a trixie container so we exercise the
+    # same toolchain as the APT repository targets.
+    container: debian:trixie-slim
+    steps:
+      - name: Install build tools and runtime deps
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            git ca-certificates \
+            debhelper dh-python pybuild-plugin-pyproject \
+            python3-all python3-hatchling python3-pytest \
+            python3-pil python3-pydantic python3-rich \
+            python3-typer python3-yaml \
+            ffmpeg libimage-exiftool-perl jpeginfo \
+            lintian devscripts dpkg-dev
+
+      - uses: actions/checkout@v4
+
+      - name: Build the .deb
+        run: dpkg-buildpackage -us -uc -b --no-sign
+
+      - name: Run lintian
+        run: lintian --profile debian ../process-media_*.changes
+
+      - name: Upload .deb as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: process-media-deb
+          path: ../process-media_*.deb
+          retention-days: 14

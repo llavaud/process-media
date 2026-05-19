@@ -1,5 +1,6 @@
 # process-media
 
+[![CI](https://github.com/llavaud/process-media/actions/workflows/ci.yml/badge.svg)](https://github.com/llavaud/process-media/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](pyproject.toml)
 [![APT repo](https://img.shields.io/badge/apt-llavaud.github.io-orange.svg)](https://llavaud.github.io/process-media/)

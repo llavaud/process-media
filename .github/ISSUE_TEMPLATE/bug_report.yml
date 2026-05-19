@@ -1,0 +1,66 @@
+name: Bug report
+description: Something is broken, the output is wrong, or the tool crashes.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report! The more
+        context you can give, the quicker this can be triaged.
+
+  - type: input
+    id: version
+    attributes:
+      label: process-media version
+      description: Output of `process-media --version` (or commit SHA if running from source).
+      placeholder: "2.0.1"
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Distribution + Python version + how you installed (`apt`, `pip`, source).
+      placeholder: "Debian trixie, Python 3.13, installed via apt"
+    validations:
+      required: true
+
+  - type: textarea
+    id: command
+    attributes:
+      label: Command you ran
+      description: The exact command line.
+      render: shell
+      placeholder: process-media -r ~/Photos/2025
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected to happen
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: What actually happened
+      description: Paste the full output (use `-v` for verbose logs).
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Minimal config that reproduces the issue
+      description: A short `process-media.yaml` excerpt.
+      render: yaml
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: Sample files, screenshots, related issues, etc. (please scrub sensitive EXIF first).

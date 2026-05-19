@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: README and CLI options
+    url: https://github.com/llavaud/process-media#readme
+    about: Most questions are answered in the README — give it a quick look first.
+  - name: Releases and changelog
+    url: https://github.com/llavaud/process-media/releases
+    about: Verify whether your issue is already addressed in a more recent release.
