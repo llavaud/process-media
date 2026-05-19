@@ -52,12 +52,47 @@ echo ">>> Publishing ${DEB_BASENAME} to the APT repository"
 # ---------------------------------------------------------------------------
 # Worktree management
 # ---------------------------------------------------------------------------
-# Create (or refresh) a git worktree pinned to gh-pages so we can edit it
-# without leaving the current branch.
-if [[ ! -d "${WORKTREE_DIR}" ]]; then
+# The worktree at ``.gh-pages`` is transient: callers can delete it
+# between runs and the script will recreate it on demand. There are
+# three states to handle:
+#   1. brand new       — no directory, no git metadata
+#   2. left in place   — directory exists and is registered with git
+#   3. stale metadata  — directory was removed manually but git still
+#                        tracks it (``git worktree list`` shows
+#                        "prunable")
+ensure_worktree() {
+    local registered
+    registered="$(git -C "${REPO_ROOT}" worktree list --porcelain \
+                  | awk -v p="${WORKTREE_DIR}" '$1=="worktree" && $2==p {print "yes"; exit}')"
+
+    if [[ -d "${WORKTREE_DIR}/.git" || -f "${WORKTREE_DIR}/.git" ]]; then
+        # State 2: usable as-is.
+        return 0
+    fi
+
+    if [[ "${registered}" == "yes" ]]; then
+        # State 3: clean up the dangling reference before recreating.
+        echo ">>> Pruning stale gh-pages worktree metadata"
+        git -C "${REPO_ROOT}" worktree prune
+    fi
+
+    # Make sure we have an up-to-date remote reference before creating
+    # the worktree — ``git worktree add`` will set the local branch up
+    # to track ``origin/${GH_PAGES_BRANCH}``.
+    git -C "${REPO_ROOT}" fetch origin "${GH_PAGES_BRANCH}" --quiet
+
     echo ">>> Creating worktree at ${WORKTREE_DIR}"
-    git -C "${REPO_ROOT}" worktree add "${WORKTREE_DIR}" "${GH_PAGES_BRANCH}"
-fi
+    if git -C "${REPO_ROOT}" show-ref --verify --quiet "refs/heads/${GH_PAGES_BRANCH}"; then
+        # Local branch already exists, just check it out into the worktree.
+        git -C "${REPO_ROOT}" worktree add "${WORKTREE_DIR}" "${GH_PAGES_BRANCH}"
+    else
+        # No local branch yet: create one tracking origin/${GH_PAGES_BRANCH}.
+        git -C "${REPO_ROOT}" worktree add --track \
+            -b "${GH_PAGES_BRANCH}" "${WORKTREE_DIR}" "origin/${GH_PAGES_BRANCH}"
+    fi
+}
+
+ensure_worktree
 
 # Make sure the worktree is on the right branch and clean before we touch it.
 WT_BRANCH="$(git -C "${WORKTREE_DIR}" rev-parse --abbrev-ref HEAD)"
