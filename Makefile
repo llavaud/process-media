@@ -8,7 +8,8 @@ SRC    := src tests
 
 .DEFAULT_GOAL := help
 
-.PHONY: help venv install test lint format check clean deb deb-clean
+.PHONY: help venv install test lint format check clean deb deb-clean \
+        apt-publish apt-push apt-status
 
 help:  ## Show this help
 	@awk 'BEGIN{FS=":.*##"; printf "Available targets:\n\n"} \
@@ -51,3 +52,16 @@ deb-clean:  ## Remove debian build artefacts
 	       debian/debhelper-build-stamp debian/*.substvars debian/*.log
 	rm -f ../process-media_*.deb ../process-media_*.changes \
 	      ../process-media_*.buildinfo
+
+apt-publish: deb  ## Build a .deb and ingest it into the gh-pages APT repo
+	scripts/apt-publish.sh
+
+apt-push:  ## Push the gh-pages worktree to origin
+	@test -d .gh-pages || { echo "no .gh-pages worktree (run 'make apt-publish' first)"; exit 1; }
+	git -C .gh-pages push origin gh-pages
+
+apt-status:  ## Show the current state of the local gh-pages worktree
+	@test -d .gh-pages || { echo "no .gh-pages worktree yet"; exit 0; }
+	@git -C .gh-pages log --oneline -5
+	@echo "---"
+	@git -C .gh-pages status

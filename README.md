@@ -10,8 +10,9 @@ Targets Python 3.11+ and uses **system-installed** ffmpeg / exiftool.
 
 - Pillow-based JPEG processing (auto-orient via EXIF, forced rotation, resize
   without upscaling, progressive output, atomic writes).
-- exiftool wrapper (via `pyexiftool`) to strip metadata while optionally
-  preserving GPS or orientation.
+- Direct `exiftool` calls (no Python wrapper) to strip metadata while
+  optionally preserving GPS or orientation, and to batch-read creation
+  dates as JSON.
 - ffmpeg-based reencoding (libx264 / libx265), audio kept as-is when already
   AAC, rotated/scaled via standard filters.
 - ffmetadata round-trip to strip media while keeping a whitelist of tags
@@ -23,6 +24,29 @@ Targets Python 3.11+ and uses **system-installed** ffmpeg / exiftool.
   separated by `---`).
 
 ## Installation
+
+### From the APT repository (Debian trixie / Ubuntu 25.04+)
+
+```bash
+# Trust the signing key
+curl -fsSL https://llavaud.github.io/process-media/apt/conf/gpg.key \
+    | sudo gpg --dearmor -o /usr/share/keyrings/process-media-archive-keyring.gpg
+
+# Add the repository
+echo "deb [signed-by=/usr/share/keyrings/process-media-archive-keyring.gpg] \
+https://llavaud.github.io/process-media/apt stable main" \
+    | sudo tee /etc/apt/sources.list.d/process-media.list
+
+sudo apt update
+sudo apt install process-media
+```
+
+The package pulls every runtime dependency from the distribution
+(`python3-typer`, `python3-pydantic`, `python3-pil`, `python3-rich`,
+`python3-yaml`, `ffmpeg`, `libimage-exiftool-perl`, …) so you get a
+working `/usr/bin/process-media` out of the box.
+
+### For development
 
 ```bash
 make install
@@ -178,3 +202,54 @@ Python package:
 docker build -t process-media .
 docker run --rm -v "$PWD:/data" process-media /data -b
 ```
+
+## Packaging (Debian / Ubuntu)
+
+### Build a `.deb` locally
+
+```bash
+make deb        # produces ../process-media_<version>-1_all.deb
+```
+
+The build runs in a clean environment (the developer `.venv` is masked
+out), uses `pybuild + pyproject` and runs the full pytest suite. Build
+dependencies are listed in `debian/control`:
+
+```bash
+sudo apt install debhelper dh-python pybuild-plugin-pyproject \
+                 python3-hatchling python3-all python3-pytest \
+                 python3-pil python3-pydantic python3-rich \
+                 python3-typer python3-yaml
+```
+
+### Publish to the APT repository (`gh-pages`)
+
+The APT repository is hosted on GitHub Pages from the `gh-pages` branch
+and managed by `reprepro`. A worktree is automatically created at
+`./.gh-pages` so you never need to leave your working branch.
+
+```bash
+# Build, ingest, sign and commit the package on the local gh-pages worktree.
+make apt-publish
+
+# Inspect what's about to be published.
+make apt-status
+
+# Push the result to GitHub.
+make apt-push
+```
+
+`make apt-publish` is idempotent: it refuses to re-ingest a version
+that's already in the repository — bump `debian/changelog` and rebuild
+to release a new revision.
+
+### Releasing a new version
+
+1. Update `debian/changelog` (`dch -i` or manual edit; set the
+   distribution to `UNRELEASED` while iterating).
+2. Run `make check` to ensure tests / linter pass.
+3. Run `make deb` and inspect with `lintian ../process-media_*.changes`.
+4. Run `make apt-publish && make apt-push`.
+
+Requirements: `reprepro`, `gnupg`, and access to the GPG signing key
+referenced in `apt/conf/distributions` on the `gh-pages` branch.
