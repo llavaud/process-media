@@ -1,11 +1,17 @@
+# Python
 .venv/
 __pycache__/
 *.pyc
-.pytest_cache/
+*.pyo
 *.egg-info/
 dist/
 build/
+
+# Test / lint / type-check caches
+.pytest_cache/
 .coverage
+coverage.xml
+htmlcov/
 .mypy_cache/
 .ruff_cache/
 
@@ -21,3 +27,10 @@ debian/process-media/
 
 # Worktree used by `make apt-publish` to manipulate the gh-pages branch.
 .gh-pages/
+
+# Editors / OS
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
