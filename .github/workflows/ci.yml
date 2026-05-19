@@ -78,6 +78,7 @@ jobs:
           apt-get update
           apt-get install -y --no-install-recommends \
             git ca-certificates \
+            build-essential \
             debhelper dh-python pybuild-plugin-pyproject \
             python3-all python3-hatchling python3-pytest \
             python3-pil python3-pydantic python3-rich \

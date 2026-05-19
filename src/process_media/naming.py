@@ -15,10 +15,9 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from .tools import ToolError, run, which
-
 from .config import FormatSpec, GlobalOptions
 from .media.base import MediaJob, MediaType
+from .tools import ToolError, run, which
 
 
 @dataclass(frozen=True)

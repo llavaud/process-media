@@ -51,8 +51,8 @@ class TestParseDateFromFilename:
             "random_name_no_date",
             "IMG_1234",
             "DSC_0001",
-            "2025",                 # year only
-            "20251332_999999",      # impossible month/day
+            "2025",  # year only
+            "20251332_999999",  # impossible month/day
         ],
     )
     def test_returns_none_when_no_match(self, stem: str) -> None:

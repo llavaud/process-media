@@ -189,18 +189,16 @@ class TestRunExiftoolJson:
 
         from process_media.naming import _run_exiftool_json
 
-        monkeypatch.setattr(
-            "process_media.naming.which", lambda _name: "/usr/bin/exiftool"
-        )
+        monkeypatch.setattr("process_media.naming.which", lambda _name: "/usr/bin/exiftool")
         payload = b'[{"SourceFile":"/x.jpg","EXIF:DateTimeOriginal":"2024:01:02 03:04:05"}]'
         monkeypatch.setattr(
             "process_media.naming.run",
-            lambda *_args, **_kwargs: CompletedProcess(args=[], returncode=0, stdout=payload, stderr=b""),
+            lambda *_args, **_kwargs: CompletedProcess(
+                args=[], returncode=0, stdout=payload, stderr=b""
+            ),
         )
         out = _run_exiftool_json([Path("/x.jpg")])
-        assert out == [
-            {"SourceFile": "/x.jpg", "EXIF:DateTimeOriginal": "2024:01:02 03:04:05"}
-        ]
+        assert out == [{"SourceFile": "/x.jpg", "EXIF:DateTimeOriginal": "2024:01:02 03:04:05"}]
 
     def test_invalid_json_raises_toolerror(self, monkeypatch: pytest.MonkeyPatch) -> None:
         from subprocess import CompletedProcess
@@ -208,12 +206,12 @@ class TestRunExiftoolJson:
         from process_media.naming import _run_exiftool_json
         from process_media.tools import ToolError
 
-        monkeypatch.setattr(
-            "process_media.naming.which", lambda _name: "/usr/bin/exiftool"
-        )
+        monkeypatch.setattr("process_media.naming.which", lambda _name: "/usr/bin/exiftool")
         monkeypatch.setattr(
             "process_media.naming.run",
-            lambda *_args, **_kwargs: CompletedProcess(args=[], returncode=0, stdout=b"not json", stderr=b""),
+            lambda *_args, **_kwargs: CompletedProcess(
+                args=[], returncode=0, stdout=b"not json", stderr=b""
+            ),
         )
         with pytest.raises(ToolError, match="invalid JSON"):
             _run_exiftool_json([Path("/x.jpg")])
@@ -224,11 +222,11 @@ class TestRunExiftoolJson:
 
         from process_media.naming import _run_exiftool_json
 
-        monkeypatch.setattr(
-            "process_media.naming.which", lambda _name: "/usr/bin/exiftool"
-        )
+        monkeypatch.setattr("process_media.naming.which", lambda _name: "/usr/bin/exiftool")
         monkeypatch.setattr(
             "process_media.naming.run",
-            lambda *_args, **_kwargs: CompletedProcess(args=[], returncode=1, stdout=b"", stderr=b""),
+            lambda *_args, **_kwargs: CompletedProcess(
+                args=[], returncode=1, stdout=b"", stderr=b""
+            ),
         )
         assert _run_exiftool_json([Path("/x.jpg")]) == []
