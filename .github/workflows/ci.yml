@@ -94,9 +94,19 @@ jobs:
       - name: Run lintian
         run: lintian --profile debian ../process-media_*.changes
 
+      # actions/upload-artifact refuses relative paths containing
+      # ``..``, so move the build outputs into the workspace first.
+      - name: Stage build outputs
+        run: |
+          mkdir -p dist
+          mv ../process-media_*.deb \
+             ../process-media_*.changes \
+             ../process-media_*.buildinfo \
+             dist/
+
       - name: Upload .deb as artifact
         uses: actions/upload-artifact@v4
         with:
           name: process-media-deb
-          path: ../process-media_*.deb
+          path: dist/*.deb
           retention-days: 14
