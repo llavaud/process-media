@@ -1,0 +1,117 @@
+[project]
+name = "process-media"
+version = "2.0.1"
+description = "Rename and process photos and videos from their EXIF metadata"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [ { name="Laurent Lavaud" } ]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: POSIX :: Linux",
+  "Operating System :: MacOS",
+  "Topic :: Multimedia :: Graphics",
+  "Topic :: Multimedia :: Video",
+]
+
+dependencies = [
+  "typer>=0.12",
+  "pydantic>=2.6",
+  "pyyaml>=6",
+  "pillow>=10.3",
+  "rich>=13.7",
+]
+
+# Runtime tools (not pip-installable): ``exiftool``, ``ffmpeg``,
+# ``ffprobe`` and optionally ``jpeginfo``. They are validated at
+# startup by :func:`process_media.tools.ensure_tools`. Distribution
+# packages (Debian/Ubuntu) declare them in the ``Depends:`` field.
+
+[project.optional-dependencies]
+# HEIC/HEIF photo support (Apple devices). Optional because libheif is
+# a heavy native dependency.
+heic = ["pillow-heif>=0.16"]
+dev = ["pytest>=8", "pytest-cov", "ruff", "mypy", "pillow-heif>=0.16"]
+
+[project.scripts]
+process-media = "process_media.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/process_media"]
+
+# ---------------------------------------------------------------------------
+# Ruff
+# ---------------------------------------------------------------------------
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+# Bundle of useful rule sets:
+#   E/F  : pycodestyle / Pyflakes baseline
+#   I    : isort
+#   UP   : pyupgrade (modern syntax)
+#   B    : flake8-bugbear (likely-bugs)
+#   SIM  : flake8-simplify
+#   PTH  : flake8-use-pathlib
+#   PT   : flake8-pytest-style
+#   RUF  : Ruff-specific extras
+select = ["E", "F", "I", "UP", "B", "SIM", "PTH", "PT", "RUF"]
+# ``B008`` flags Typer's ``typer.Option(...)`` default usage which is the
+# documented and idiomatic way to wire CLI flags.
+ignore = ["B008"]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests may freely use ``Path`` constructors and asserts that ruff would
+# complain about in library code.
+"tests/*" = ["PTH"]
+
+# ---------------------------------------------------------------------------
+# Pytest
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = ["-ra", "--strict-markers", "--strict-config"]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+# ---------------------------------------------------------------------------
+# Coverage
+# ---------------------------------------------------------------------------
+[tool.coverage.run]
+branch = true
+source = ["process_media"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+exclude_lines = [
+  "pragma: no cover",
+  "raise NotImplementedError",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
+]
+
+# ---------------------------------------------------------------------------
+# Mypy
+# ---------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.11"
+files = ["src", "tests"]
+strict = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+# Pydantic v2 emits a mypy plugin for richer model checking.
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+# Third-party libraries without type stubs.
+module = ["exiftool.*", "pillow_heif.*"]
+ignore_missing_imports = true

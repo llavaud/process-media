@@ -1,26 +1,27 @@
-FROM debian:stretch-slim
+# syntax=docker/dockerfile:1.6
+FROM python:3.12-slim AS runtime
 
-LABEL maintainer="Laurent Lavaud <l.lavaud@gmail.com>"
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1
 
-ENV DEBIAN_FRONTEND=noninteractive LANG=en_US.UTF-8 LC_ALL=C.UTF-8 LANGUAGE=en_US.UTF-8
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+        ffmpeg \
+        libimage-exiftool-perl \
+        jpeginfo \
+ && rm -rf /var/lib/apt/lists/*
 
-COPY . /usr/src/process-media
+WORKDIR /app
 
-COPY process-media.yaml /etc/process-media.yaml
+# Install package
+COPY pyproject.toml README.md ./
+COPY src ./src
+RUN pip install .
 
-WORKDIR /usr/src/process-media
+# Default workdir for user data
+WORKDIR /data
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
- perl \
- jpeginfo \
- libimage-exiftool-perl \
- libimage-magick-perl \
- libmime-types-perl \
- libsys-cpu-perl \
- libterm-readkey-perl \
- libyaml-tiny-perl \
-&& rm -rf /var/lib/apt/lists/*
-
-RUN ln -snf /usr/share/zoneinfo/Europe/Paris /etc/localtime && echo Europe/Paris > /etc/timezone
-
-ENTRYPOINT ["/usr/src/process-media/process-media", "--config", "/etc/process-media.yaml", "/media"]
+ENTRYPOINT ["process-media"]
+CMD ["--help"]

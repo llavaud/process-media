@@ -1,0 +1,99 @@
+.TH PROCESS-MEDIA 1 "May 2026" "process-media 2.0.1" "User Commands"
+.SH NAME
+process-media \- rename and process photos and videos from their EXIF metadata
+.SH SYNOPSIS
+.B process-media
+[\fIOPTIONS\fR] \fIPATH\fR
+.SH DESCRIPTION
+.B process-media
+scans
+.I PATH
+(a file or directory) for supported photos (JPEG, HEIC) and videos (MP4,
+MOV, MKV\(en) reads their EXIF metadata to rename them after the creation
+date (\fIYYYYMMDD-HHMMSS\fR), then applies the transformations defined in
+a YAML configuration file: rotation, resize, JPEG recompression, metadata
+stripping, video re-encoding and thumbnail generation.
+.PP
+Output flavours are described in named \fIformats\fR, so the same source
+collection can be processed in several variants in a single run.
+.SH OPTIONS
+.TP
+.B \-t, \-\-type \fITYPES\fR
+Comma-separated media types to process (default: \fBphoto,video\fR).
+.TP
+.B \-f, \-\-format \fINAMES\fR
+Comma-separated format names from the configuration file. By default all
+formats matching the requested types run.
+.TP
+.B \-c, \-\-config \fIPATH\fR
+Path to the YAML configuration file. See
+.B FILES
+below for the search order.
+.TP
+.B \-m, \-\-max\-threads \fIN\fR
+Worker process count (0 = number of CPUs).
+.TP
+.B \-\-tzoffset \fISECONDS\fR
+Seconds added to EXIF timestamps before renaming.
+.TP
+.B \-k, \-\-keep\-name
+Do not rename files from EXIF; keep the original stems.
+.TP
+.B \-v, \-\-verbose
+Enable debug logging.
+.TP
+.B \-o, \-\-overwrite
+Overwrite existing target files (default: skip).
+.TP
+.B \-b, \-\-batch
+Non-interactive mode (skip the y/n confirmation prompt).
+.TP
+.B \-n, \-\-dry\-run
+List the planned \fIsource \(-> target\fR mappings without writing anything.
+.TP
+.B \-r, \-\-recursive
+Scan \fIPATH\fR recursively (descend into subdirectories).
+.TP
+.B \-\-help
+Show the help message and exit.
+.SH FILES
+The configuration file is looked up in this order (first hit wins):
+.IP \(bu 2
+\fB\-\-config\fR argument.
+.IP \(bu 2
+\fB$PROCESS_MEDIA_CONFIG\fR environment variable.
+.IP \(bu 2
+\fIPATH/process-media.yaml\fR (or the parent directory when
+.I PATH
+is a file).
+.IP \(bu 2
+\fI./process-media.yaml\fR (current working directory).
+.IP \(bu 2
+\fI/etc/process-media.yaml\fR.
+.PP
+An annotated example is shipped in
+.I /usr/share/doc/process-media/examples/process-media.yaml.example.
+.SH EXIT STATUS
+.TP
+.B 0
+Success (or no input matched the filters).
+.TP
+.B 1
+One or more jobs failed.
+.TP
+.B 2
+Configuration error or invalid selection.
+.TP
+.B 3
+A required external tool (ffmpeg, exiftool\(en) is missing.
+.SH ENVIRONMENT
+.TP
+.B PROCESS_MEDIA_CONFIG
+Overrides the default search path for the YAML configuration file.
+.SH SEE ALSO
+.BR exiftool (1),
+.BR ffmpeg (1),
+.BR ffprobe (1),
+.BR jpeginfo (1).
+.SH AUTHOR
+Laurent Lavaud <l.lavaud@gmail.com>.
